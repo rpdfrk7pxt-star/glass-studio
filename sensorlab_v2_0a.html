@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sensor Lab">
+<meta name="theme-color" content="#071324">
+<title>Sensor Lab</title>
+<link rel="apple-touch-icon" id="touchIcon" href="data:,">
+<script type="importmap">{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+}}</script>
+<style>
+:root{
+  --bg1:#071324;--bg2:#102540;--glass:rgba(255,255,255,.065);--glass2:rgba(255,255,255,.12);
+  --line:rgba(255,255,255,.13);--text:#EAF2FF;--muted:#8FA3BF;
+  --ice:#8AD9FF;--amber:#FFB84D;--mint:#74E3B5;--rose:#FF7A8A;--orange:#FF8A3D;
+  --num:ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg1);color:var(--text);font-family:var(--ui);-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none}
+body{min-height:100vh;overscroll-behavior:none}
+#bg{position:fixed;inset:-40px;z-index:-1;will-change:transform;
+  background:radial-gradient(90% 55% at 50% 2%,rgba(255,138,61,.28) 0%,transparent 60%),
+             radial-gradient(110% 60% at 10% 10%,#21497a 0%,transparent 55%),
+             radial-gradient(80% 55% at 105% 40%,#1b3460 0%,transparent 60%),
+             radial-gradient(70% 50% at 0% 100%,#0f3a4a 0%,transparent 60%),
+             linear-gradient(180deg,var(--bg2),var(--bg1) 65%)}
+main{max-width:760px;margin:0 auto;padding:calc(var(--st) + 16px) 16px calc(var(--sb) + 28px)}
+.top{display:flex;align-items:center;justify-content:space-between;margin:0 2px 14px}
+h1{font-family:var(--num);font-weight:700;font-size:31px;letter-spacing:-.02em;margin:0}
+.chip{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:99px;background:var(--glass);border:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;background:#4f5f75;flex:none}
+.dot.on{background:var(--mint);box-shadow:0 0 8px var(--mint)}
+.dot.off{background:var(--rose)}
+.glass{background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%)}
+.hero{position:relative;border-radius:32px;height:min(64vh,520px);overflow:hidden;touch-action:pan-y}
+#heroCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#heroMsg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--muted);font-size:14px}
+#marks{position:absolute;inset:0;pointer-events:none}
+.mk{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border:0;padding:0;border-radius:50%;pointer-events:auto;cursor:pointer;
+  background:radial-gradient(circle,#fff 0 3px,rgba(138,217,255,.95) 4px,rgba(138,217,255,.25) 8px,rgba(138,217,255,0) 16px);animation:pulse 1.8s ease-in-out infinite}
+.mk.sel{background:radial-gradient(circle,#fff 0 4px,var(--orange) 5px,rgba(255,138,61,.35) 10px,rgba(255,138,61,0) 17px)}
+@keyframes pulse{50%{transform:scale(1.25)}}
+#pop{position:absolute;left:12px;right:12px;bottom:78px;z-index:3;border-radius:20px;padding:14px 16px;display:none;background:rgba(10,24,44,.82)}
+#pop.show{display:block}
+#pop h4{margin:0 0 4px;font-size:18px;font-family:var(--num)}
+#pop p{margin:0 0 10px;font-size:14px;color:#c4d3e8;line-height:1.45}
+#pop .acts{display:flex;gap:8px}
+#hint{position:absolute;left:0;right:0;top:16px;text-align:center;font-size:13px;color:var(--muted);pointer-events:none}
+.heroBar{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;align-items:stretch}
+.heroVal{flex:1;padding:9px 12px;border-radius:16px;background:rgba(7,19,36,.5);border:1px solid var(--line);min-width:0}
+.heroVal b{display:block;font-family:var(--num);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.heroVal span{font-size:12px;color:var(--muted)}
+.btn{font:inherit;font-size:15px;font-weight:600;color:var(--text);background:var(--glass2);border:1px solid var(--line);border-radius:14px;padding:11px 14px;cursor:pointer}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--orange);color:#2a1206;border-color:transparent}
+.btn.on{background:var(--orange);color:#2a1206;border-color:transparent}
+h2{font-size:18px;font-weight:600;margin:28px 4px 10px}
+.sub{font-size:14px;color:var(--muted);margin:-6px 4px 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{position:relative;border-radius:22px;padding:13px 14px;min-height:118px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;text-align:left;color:inherit;font:inherit;width:100%}
+.tile.wide{grid-column:1/-1}
+.tile .t{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.tile .e{font-size:26px;line-height:1}
+.tile .n{font-size:15px;font-weight:600;margin-top:10px}
+.tile .v{font-family:var(--num);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v:empty{display:none}
+.tile .v small{font-size:13px;color:var(--muted);font-weight:500;margin-left:3px}
+.tile .s{font-size:12px;color:var(--muted);min-height:15px;margin-top:2px}
+.tile.fun{background:linear-gradient(150deg,rgba(255,138,61,.16),rgba(255,255,255,.05) 55%)}
+.tile:active{transform:scale(.98)}
+.locked{border-radius:20px;padding:15px 16px;font-size:14px;color:var(--muted);line-height:1.55}
+.locked b{color:var(--text);font-weight:600}
+footer{text-align:center;color:#5d708c;font-size:12px;margin-top:26px}
+#gate{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:20px 16px calc(var(--sb) + 20px);background:rgba(4,10,20,.5)}
+#gate.hide{display:none}
+#gate .card{max-width:440px;width:100%;border-radius:26px;padding:22px;background:rgba(16,37,64,.85)}
+#gate h3{margin:0 0 6px;font-size:23px;font-family:var(--num)}
+#gate p{margin:0 0 16px;color:var(--muted);font-size:15px;line-height:1.45}
+#gate .btn{width:100%;padding:14px}
+#sheet{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:linear-gradient(180deg,#0d1f37,#071324 70%);padding:calc(var(--st) + 10px) 16px calc(var(--sb) + 12px)}
+#sheet.open{display:flex;animation:up .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(26px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#sheet.open{animation:none}.tile:active,.btn:active{transform:none}.mk{animation:none}}
+.sh{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px;gap:10px}
+.sh h3{margin:0;font-size:24px;font-family:var(--num);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stage{position:relative;flex:1;min-height:0;border-radius:24px;overflow:hidden;touch-action:none;background:#050d19}
+#stage canvas,#stage video{position:absolute;inset:0;width:100%;height:100%;display:block}
+#stage video{object-fit:cover}
+#stage video.mirror{transform:scaleX(-1)}
+.smsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--muted);font-size:15px;line-height:1.5;pointer-events:none;z-index:5}
+.smsg b{display:block;color:var(--text);font-size:18px;margin-bottom:4px}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chips:empty{display:none}
+.cb{flex:none;font:inherit;font-size:14px;font-weight:600;padding:9px 13px;border-radius:99px;background:var(--glass);border:1px solid var(--line);color:#c4d3e8;cursor:pointer}
+.cb.on{background:var(--orange);color:#2a1206;border-color:transparent}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:10px}
+.stats:empty{display:none}
+.stat{padding:9px 12px;border-radius:16px}
+.stat b{display:block;font-family:var(--num);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat span{font-size:12px;color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin:10px 2px 0;line-height:1.45}
+.actions{display:flex;gap:8px;margin-top:10px}
+.actions:empty{display:none}
+.actions .btn{flex:1}
+.panel{position:absolute;inset:0;overflow:auto;padding:8px 18px 18px;-webkit-user-select:text;user-select:text}
+.row{display:flex;justify-content:space-between;gap:14px;padding:12px 2px;border-bottom:1px solid var(--line);font-size:15px}
+.row span{color:var(--muted);flex:none}
+.row b{font-weight:600;text-align:right;word-break:break-word}
+.lab{position:absolute;left:14px;bottom:14px;padding:10px 14px;border-radius:16px;background:rgba(7,19,36,.55);border:1px solid var(--line);z-index:3}
+.lab b{font-family:var(--num);font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<main>
+  <div class="top">
+    <h1>Sensor Lab</h1>
+    <div class="chip"><span class="dot" id="liveDot"></span><span id="liveTxt">bereit</span></div>
+  </div>
+
+  <section class="hero glass" id="hero" aria-label="iPhone in 3D">
+    <canvas id="heroCanvas"></canvas>
+    <div id="heroMsg"></div>
+    <div id="hint">Wische zum Drehen. Röntgenblick zeigt, wo die Sensoren sitzen.</div>
+    <div id="marks"></div>
+    <div id="pop" class="glass"><h4 id="popT"></h4><p id="popP"></p><div class="acts" id="popA"></div></div>
+    <div class="heroBar">
+      <div class="heroVal"><b id="hTilt">–</b><span>Neigung</span></div>
+      <button class="btn" id="hXray">Röntgenblick</button>
+      <button class="btn" id="hCenter">Zentrieren</button>
+    </div>
+  </section>
+
+  <h2>Kamera und KI</h2>
+  <p class="sub">Die KI läuft direkt auf dem iPhone. Beim ersten Öffnen lädt sie einmal ein Modell.</p>
+  <div class="grid" id="gAI"></div>
+  <h2>Spiele und Experimente</h2>
+  <div class="grid" id="gFun"></div>
+  <h2>Klang</h2>
+  <div class="grid" id="gSound"></div>
+  <h2>Messgeräte</h2>
+  <div class="grid" id="gMeas"></div>
+
+  <h2>Im Browser gesperrt</h2>
+  <div class="locked glass">
+    Apple gibt diese Teile nur an native Apps frei: <b>echter LiDAR, TrueDepth-Tiefendaten, Barometer, Näherungssensor, NFC, Bluetooth, Haptik, Taschenlampe, 120 Hz</b>.
+    LiDAR und Face ID werden hier deshalb mit KI über die Kamera nachgebaut.
+  </div>
+  <footer>Sensor Lab v2_0a</footer>
+</main>
+
+<div id="sheet" role="dialog" aria-modal="true">
+  <div class="sh"><h3 id="shTitle"></h3><button class="btn" id="shClose">Schließen</button></div>
+  <div id="stage"></div>
+  <div class="chips" id="shChips"></div>
+  <div class="stats" id="shStats"></div>
+  <div class="actions" id="shActions"></div>
+  <p class="note" id="shNote"></p>
+</div>
+
+<div id="gate">
+  <div class="card glass">
+    <h3>Sensoren aktivieren</h3>
+    <p>Safari fragt gleich nach Bewegung und Ausrichtung. Kamera, Mikrofon und Standort werden erst abgefragt, wenn du eine Funktion öffnest, die sie braucht.</p>
+    <button class="btn primary" id="gateBtn">Los geht's</button>
+  </div>
+</div>
+<script type="module">
+const $ = s => document.querySelector(s);
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = (v, d = 0) => (v == null || !isFinite(v)) ? '–' : v.toFixed(d).replace('.', ',');
+const DIRS = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+const dirName = h => DIRS[Math.round(((h % 360) + 360) % 360 / 45) % 8];
+const wrap180 = a => ((a + 540) % 360) - 180;
+const store = { get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+
+class Ring {
+  constructor(n) { this.a = new Float32Array(n); this.n = n; this.i = 0; this.len = 0; }
+  push(v) { this.a[this.i] = v; this.i = (this.i + 1) % this.n; if (this.len < this.n) this.len++; }
+  get(k) { return this.a[(this.i - this.len + k + this.n * 2) % this.n]; }
+  clear() { this.i = 0; this.len = 0; }
+}
+
+/* ================= Zustand ================= */
+const S = {
+  hasOri: false, hasMot: false, denied: false,
+  a: 0, b: 0, g: 0, alpha0: null, heading: null, headAcc: null, northOff: null,
+  u: { x: 0, y: 0, z: 1 },
+  ax: 0, ay: 0, az: 0, gTot: 9.81, ra: 0, rb: 0, rg: 0,
+  gNow: 1, gMax: 1, seis: 0, seisMax: 0,
+  steps: 0, stepUp: false, stepLp: 0, stepLast: 0, stepTimes: [], stepPulse: 0,
+  ff: { on: false, t0: 0, id: 0, last: null, peakUntil: 0 },
+  gps: false, gpsErr: null, kmh: 0, kmhMax: 0, dist: 0, alt: null, acc: null, lat: null, lon: null, lastPos: null,
+  fps: 0
+};
+const H = { gx: new Ring(240), gy: new Ring(240), gz: new Ring(240), seis: new Ring(300), gTrail: [], db: new Ring(200) };
+
+/* ================= Bewegung & Ausrichtung ================= */
+function onOri(e) {
+  if (e.alpha == null && e.beta == null) return;
+  S.hasOri = true;
+  S.a = e.alpha || 0; S.b = e.beta || 0; S.g = e.gamma || 0;
+  if (S.alpha0 == null) S.alpha0 = S.a;
+  const cb = Math.cos(S.b * D2R), sb = Math.sin(S.b * D2R), sg = Math.sin(S.g * D2R), cg = Math.cos(S.g * D2R);
+  S.u = { x: -cb * sg, y: sb, z: cb * cg };
+  if (typeof e.webkitCompassHeading === 'number' && e.webkitCompassHeading >= 0) {
+    S.heading = e.webkitCompassHeading; S.headAcc = e.webkitCompassAccuracy;
+    if (Math.abs(S.u.z) > 0.55 || S.northOff == null) {           // nur annähernd flach kalibrieren
+      const off = wrap180((360 - S.heading) - S.a);
+      S.northOff = S.northOff == null ? off : S.northOff + wrap180(off - S.northOff) * 0.08;
+    }
+  } else if (e.absolute) { S.heading = (360 - S.a) % 360; S.northOff = 0; }
+}
+function onMot(e) {
+  const a = e.acceleration || {}, g = e.accelerationIncludingGravity || {}, r = e.rotationRate || {};
+  if (g.x == null && a.x == null && r.alpha == null) return;
+  S.hasMot = true;
+  const gx = g.x || 0, gy = g.y || 0, gz = g.z || 0, gTot = Math.hypot(gx, gy, gz);
+  S.gTot = gTot;
+  if (a.x != null) { S.ax = a.x; S.ay = a.y; S.az = a.z; } else { S.ax = 0; S.ay = 0; S.az = gTot - 9.81; }
+  S.ra = r.alpha || 0; S.rb = r.beta || 0; S.rg = r.gamma || 0;
+  H.gx.push(S.rb); H.gy.push(S.rg); H.gz.push(S.ra);
+  S.gNow = gTot / 9.80665; if (S.gNow > S.gMax) S.gMax = S.gNow;
+  const mag = Math.hypot(S.ax, S.ay, S.az);
+  S.seis = mag; H.seis.push(mag); if (mag > S.seisMax) S.seisMax = mag;
+  H.gTrail.push([S.ax / 9.80665, S.ay / 9.80665]); if (H.gTrail.length > 40) H.gTrail.shift();
+  const t = performance.now();
+  // Schritt-Schätzung
+  S.stepLp = S.stepLp * 0.8 + mag * 0.2;
+  if (!S.stepUp && S.stepLp > 1.2) S.stepUp = true;
+  else if (S.stepUp && S.stepLp < 0.5) {
+    S.stepUp = false;
+    if (t - S.stepLast > 280) { S.steps++; S.stepLast = t; S.stepPulse = t; S.stepTimes.push(t); if (S.stepTimes.length > 40) S.stepTimes.shift(); }
+  }
+  // Freier Fall (Sprung / Fall-Test)
+  const ff = S.ff;
+  if (!ff.on && gTot < 3) { ff.on = true; ff.t0 = t; }
+  else if (ff.on && gTot > 6) {
+    ff.on = false; const dur = (t - ff.t0) / 1000;
+    if (dur > 0.08 && dur < 2) { ff.id++; ff.last = { dur, t, peak: gTot / 9.80665 }; ff.peakUntil = t + 300; }
+  }
+  if (ff.last && t < ff.peakUntil) ff.last.peak = Math.max(ff.last.peak, gTot / 9.80665);
+  if (MOT_HOOK) MOT_HOOK(t, mag, gTot);
+}
+let MOT_HOOK = null;
+async function enableMotion() {
+  const reqs = [];
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') reqs.push(DeviceMotionEvent.requestPermission());
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') reqs.push(DeviceOrientationEvent.requestPermission());
+  const res = await Promise.allSettled(reqs);
+  if (res.length && !res.some(r => r.status === 'fulfilled' && r.value === 'granted')) S.denied = true;
+  addEventListener('deviceorientation', onOri);
+  addEventListener('devicemotion', onMot);
+}
+const motTxt = () => S.denied ? 'Bewegungszugriff verweigert' : 'Warte auf Bewegungssensor';
+
+/* Gerät -> Welt (Ost, Nord, Oben), alpha nordbezogen */
+function devMatrix(alphaDeg) {
+  const A = alphaDeg * D2R, B = S.b * D2R, G = S.g * D2R;
+  const cA = Math.cos(A), sA = Math.sin(A), cB = Math.cos(B), sB = Math.sin(B), cG = Math.cos(G), sG = Math.sin(G);
+  return [cA * cG - sA * sB * sG, -sA * cB, cA * sG + sA * sB * cG,
+          sA * cG + cA * sB * sG, cA * cB, sA * sG - cA * sB * cG,
+          -cB * sG, sB, cB * cG];
+}
+
+/* ================= GPS ================= */
+function hav(a, b) {
+  const R = 6371000, dLa = (b.lat - a.lat) * D2R, dLo = (b.lon - a.lon) * D2R;
+  const x = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * D2R) * Math.cos(b.lat * D2R) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+function startGPS() {
+  if (S.gps) return;
+  if (!navigator.geolocation) { S.gpsErr = 'Standort nicht unterstützt'; return; }
+  S.gps = true; S.gpsErr = null;
+  navigator.geolocation.watchPosition(p => {
+    const c = p.coords, cur = { lat: c.latitude, lon: c.longitude, t: p.timestamp };
+    let v = (c.speed != null && c.speed >= 0) ? c.speed : null;
+    if (S.lastPos) {
+      const d = hav(S.lastPos, cur), dt = (cur.t - S.lastPos.t) / 1000;
+      if (c.accuracy < 30 && d > 2) S.dist += d;
+      if (v == null && dt > 0 && c.accuracy < 30) v = d / dt;
+    }
+    S.lastPos = cur; S.lat = c.latitude; S.lon = c.longitude; S.alt = c.altitude; S.acc = c.accuracy;
+    S.kmh = v != null ? v * 3.6 : 0; if (S.kmh > S.kmhMax) S.kmhMax = S.kmh;
+    S.gpsErr = null;
+  }, err => { S.gpsErr = err.code === 1 ? 'Standort verweigert (Einstellungen › Apps › Safari › Standort)' : 'Kein GPS-Signal'; if (err.code === 1) S.gps = false; },
+  { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+}
+
+/* ================= Mikrofon ================= */
+let A = {};
+const M = { db: null, dbMax: 0, dbSum: 0, dbN: 0, freq: null, note: '', cents: 0, peak: 0 };
+let ACTX = null;
+function audioCtx() { if (!ACTX) ACTX = new (window.AudioContext || window.webkitAudioContext)(); if (ACTX.state === 'suspended') ACTX.resume(); return ACTX; }
+async function startMic() {
+  if (A.an) return true;
+  try {
+    const ctx = audioCtx();
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const src = ctx.createMediaStreamSource(st), an = ctx.createAnalyser(), an2 = ctx.createAnalyser();
+    an.fftSize = 8192; an.smoothingTimeConstant = 0.2; an2.fftSize = 512;
+    src.connect(an); src.connect(an2);
+    await ctx.resume();
+    A = { ctx, st, src, an, an2, td: new Float32Array(an.fftSize), fd: new Float32Array(an.frequencyBinCount), td2: new Float32Array(512) };
+    return true;
+  } catch (e) { A = { err: e.name === 'NotAllowedError' ? 'Mikrofon-Zugriff verweigert' : 'Mikrofon nicht verfügbar' }; return false; }
+}
+function stopMic() { if (A.st) A.st.getTracks().forEach(t => t.stop()); if (A.src) A.src.disconnect(); A = {}; M.db = null; M.freq = null; }
+const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'H'];
+function readMic() {
+  if (!A.an) return;
+  A.an2.getFloatTimeDomainData(A.td2);
+  let pk = 0; for (let i = 0; i < A.td2.length; i++) pk = Math.max(pk, Math.abs(A.td2[i]));
+  M.peak = pk;
+  A.an.getFloatTimeDomainData(A.td);
+  let s = 0; for (let i = 0; i < A.td.length; i++) s += A.td[i] * A.td[i];
+  const rms = Math.sqrt(s / A.td.length);
+  M.db = clamp(20 * Math.log10(rms + 1e-9) + 100, 0, 130);
+  if (M.db > M.dbMax) M.dbMax = M.db;
+  M.dbSum += Math.pow(10, M.db / 10); M.dbN++;
+  H.db.push(M.db);
+  A.an.getFloatFrequencyData(A.fd);
+  const binHz = A.ctx.sampleRate / A.an.fftSize, i0 = Math.ceil(60 / binHz), i1 = Math.floor(5000 / binHz);
+  let mi = i0; for (let i = i0; i <= i1; i++) if (A.fd[i] > A.fd[mi]) mi = i;
+  if (A.fd[mi] > -75) {
+    const a = A.fd[mi - 1], b = A.fd[mi], c = A.fd[mi + 1], den = a - 2 * b + c;
+    const p = den ? 0.5 * (a - c) / den : 0, f = (mi + p) * binHz;
+    const n = 12 * Math.log2(f / 440) + 69, nr = Math.round(n);
+    M.freq = f; M.note = NOTES[((nr % 12) + 12) % 12] + (Math.floor(nr / 12) - 1); M.cents = (n - nr) * 100;
+  } else M.freq = null;
+}
+
+/* ================= Kamera ================= */
+const CAM = { st: null, facing: 'environment', vid: null, err: null, lum: null, lumMax: 0, lumMin: 100 };
+function camVideo() {
+  if (!CAM.vid) { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('muted', ''); CAM.vid = v; }
+  return CAM.vid;
+}
+async function camStart(facing) {
+  camStop();
+  CAM.facing = facing || CAM.facing;
+  const v = camVideo();
+  v.classList.toggle('mirror', CAM.facing === 'user');
+  try {
+    CAM.st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: CAM.facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    v.srcObject = CAM.st; await v.play(); CAM.err = null; return true;
+  } catch (e) { CAM.err = e.name === 'NotAllowedError' ? 'Kamera-Zugriff verweigert (Einstellungen › Apps › Safari › Kamera)' : 'Kamera nicht verfügbar'; return false; }
+}
+function camStop() { if (CAM.st) CAM.st.getTracks().forEach(t => t.stop()); CAM.st = null; CAM.lum = null; if (CAM.vid) CAM.vid.srcObject = null; }
+const camReady = () => CAM.st && CAM.vid && CAM.vid.readyState >= 2 && CAM.vid.videoWidth > 0;
+/* Bildpunkt (normiert 0..1) -> Bühnenkoordinaten bei object-fit: cover */
+function coverMap(w, h) {
+  const v = CAM.vid, vw = v.videoWidth || 1, vh = v.videoHeight || 1, sc = Math.max(w / vw, h / vh);
+  const dx = (w - vw * sc) / 2, dy = (h - vh * sc) / 2, mir = CAM.facing === 'user';
+  return { sc, vw, vh, dx, dy, x: nx => { const p = dx + nx * vw * sc; return mir ? w - p : p; }, y: ny => dy + ny * vh * sc };
+}
+
+/* ================= KI-Lader ================= */
+const MP_VER = '1.1.0';
+const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}`;
+const MODELS = {
+  face: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+  hand: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+  obj: 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite'
+};
+const AI = { mod: null, fs: null, face: null, hand: null, obj: null };
+async function vision() {
+  if (!AI.mod) AI.mod = await import(`${MP_URL}/vision_bundle.mjs`);
+  if (!AI.fs) AI.fs = await AI.mod.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+  return AI.mod;
+}
+async function makeTask(kind) {
+  if (AI[kind]) return AI[kind];
+  const V = await vision();
+  const opts = d => {
+    const base = { baseOptions: { modelAssetPath: MODELS[kind], delegate: d }, runningMode: 'VIDEO' };
+    if (kind === 'face') return { ...base, numFaces: 1, outputFaceBlendshapes: true };
+    if (kind === 'hand') return { ...base, numHands: 2 };
+    return { ...base, scoreThreshold: 0.45, maxResults: 8 };
+  };
+  const Cls = kind === 'face' ? V.FaceLandmarker : kind === 'hand' ? V.HandLandmarker : V.ObjectDetector;
+  try { AI[kind] = await Cls.createFromOptions(AI.fs, opts('GPU')); }
+  catch (e) { AI[kind] = await Cls.createFromOptions(AI.fs, opts('CPU')); }
+  return AI[kind];
+}
+let lastVT = -1, lastTS = 0;
+function detect(task, kind) {
+  if (!task || !camReady()) return null;
+  const v = CAM.vid;
+  if (v.currentTime === lastVT) return undefined;      // kein neues Bild
+  lastVT = v.currentTime;
+  let ts = performance.now(); if (ts <= lastTS) ts = lastTS + 1; lastTS = ts;
+  return task.detectForVideo(v, ts);
+}
+
+/* ================= 3D-iPhone (Startseite) ================= */
+const HERO = { ok: false, xray: false, yaw: 0, T: null };
+const PH = { W: 1.16, H: 2.42, D: 0.12, BT: 0.03 };
+const PY = PH.H / 2 - 0.36;
+const SENSORS = [
+  { n: 'Hauptkamera 48 MP', p: [-0.3, PY + 0.13, -0.17], t: 'Das große Auge hinten. 48 Millionen Bildpunkte, so fein, dass man einzelne Grashalme erkennt.', tool: 'filter' },
+  { n: 'Ultraweitwinkel', p: [-0.3, PY - 0.13, -0.17], t: 'Sieht viel mehr auf einmal, fast so weit, wie deine Augen zur Seite schauen. Kann auch ganz nah Makrofotos machen.', tool: 'filter' },
+  { n: 'Teleobjektiv', p: [-0.07, PY, -0.17], t: 'Holt weit entfernte Dinge nah heran, wie ein kleines Fernglas.', tool: 'objects' },
+  { n: 'LiDAR-Scanner', p: [0.32, PY - 0.13, -0.15], t: 'Schießt unsichtbare Laserpunkte in den Raum und misst, wie lange das Licht zurück braucht. So kennt das iPhone die Entfernung zu allem. Hier mit KI nachgebaut.', tool: 'depth' },
+  { n: 'Blitz', p: [0.32, PY + 0.13, -0.15], t: 'Helles Licht für Fotos im Dunkeln. Der Browser darf ihn leider nicht als Taschenlampe einschalten.', tool: 'light' },
+  { n: 'Face ID', p: [0, PH.H / 2 - 0.15, 0.1], t: 'Ein Projektor wirft über 30.000 unsichtbare Punkte auf dein Gesicht. Eine Infrarotkamera baut daraus eine 3D-Karte von dir.', tool: 'face' },
+  { n: 'Umgebungslicht', p: [-0.22, PH.H / 2 - 0.15, 0.1], t: 'Merkt, wie hell es um dich ist, und macht den Bildschirm automatisch heller oder dunkler.', tool: 'light' },
+  { n: 'Gyroskop und Beschleunigung', p: [0.12, 0.22, 0], t: 'Ein winziger Chip spürt jede Drehung und jeden Stoß, hunderte Male pro Sekunde.', tool: 'maze' },
+  { n: 'Kompass', p: [-0.25, 0.5, 0], t: 'Spürt das Magnetfeld der Erde und weiß deshalb immer, wo Norden ist.', tool: 'sky' },
+  { n: 'A19 Pro Chip', p: [0.18, 0.62, 0], t: 'Das Gehirn des iPhones. Ein eigener KI-Teil schafft Billionen Rechnungen pro Sekunde.', tool: 'objects' },
+  { n: 'Akku', p: [0, -0.4, 0], t: 'Speichert die Energie für den ganzen Tag und lädt auch ohne Kabel über MagSafe.', tool: null },
+  { n: 'Mikrofone', p: [-0.32, -PH.H / 2 + 0.03, 0], t: 'Mehrere Mikrofone hören gleichzeitig zu und filtern zusammen Wind und Lärm heraus.', tool: 'voice' },
+  { n: 'Lautsprecher', p: [0.32, -PH.H / 2 + 0.03, 0], t: 'Unten und oben sitzt je ein Lautsprecher. Zusammen klingt es in Stereo.', tool: 'waterfall' },
+  { n: 'GPS-Antenne', p: [0, PH.H / 2 - 0.02, 0], t: 'Empfängt Signale von Satelliten im Weltall und weiß so auf wenige Meter genau, wo du bist.', tool: 'tacho' },
+  { n: 'Barometer', p: [0.38, -0.85, 0], t: 'Misst den Luftdruck. Daran merkt das iPhone, wie viele Stockwerke du hochgelaufen bist. Im Browser leider gesperrt.', tool: null }
+];
+async function initHero() {
+  let THREE, RoomEnvironment;
+  try { THREE = await import('three'); ({ RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js')); }
+  catch (e) { const m = $('#heroMsg'); m.style.display = 'flex'; m.textContent = '3D-Ansicht braucht beim ersten Laden Internet.'; return; }
+  HERO.T = THREE;
+  const cv = $('#heroCanvas');
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  const scene = new THREE.Scene();
+  const pm = new THREE.PMREMGenerator(r); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+  const cam = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+  cam.position.set(0, 2.2, 6); cam.lookAt(0, 0.15, 0);
+  const d1 = new THREE.DirectionalLight(0xffffff, 1.6); d1.position.set(3, 5, 4); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0x8ad9ff, 1.4); d2.position.set(-4, -1, -3); scene.add(d2);
+  const d3 = new THREE.DirectionalLight(0xffb070, 1.0); d3.position.set(-3, 3, 2); scene.add(d3);
+
+  const { W, H: Hh, D, BT } = PH;
+  const rr = (w, h, rad) => { const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+    s.moveTo(x + rad, y); s.lineTo(x + w - rad, y); s.quadraticCurveTo(x + w, y, x + w, y + rad);
+    s.lineTo(x + w, y + h - rad); s.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+    s.lineTo(x + rad, y + h); s.quadraticCurveTo(x, y + h, x, y + h - rad);
+    s.lineTo(x, y + rad); s.quadraticCurveTo(x, y, x + rad, y); return s; };
+  const grp = new THREE.Group(), outer = new THREE.Group(); outer.add(grp);
+  const bodyGeo = new THREE.ExtrudeGeometry(rr(W, Hh, 0.2), { depth: D, bevelEnabled: true, bevelThickness: BT, bevelSize: BT, bevelSegments: 5, curveSegments: 20 });
+  bodyGeo.center();
+  const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0xf0762e, metalness: 0.62, roughness: 0.3, clearcoat: 0.4, clearcoatRoughness: 0.25 });
+  grp.add(new THREE.Mesh(bodyGeo, bodyMat));
+  // Display
+  const sw = W - 0.07, shh = Hh - 0.07;
+  const scrGeo = new THREE.ShapeGeometry(rr(sw, shh, 0.17), 18);
+  const pos = scrGeo.attributes.position, uv = scrGeo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + sw / 2) / sw, (pos.getY(i) + shh / 2) / shh);
+  const tc = document.createElement('canvas'); tc.width = 300; tc.height = 626;
+  const tx = tc.getContext('2d'), tex = new THREE.CanvasTexture(tc); tex.colorSpace = THREE.SRGBColorSpace;
+  const scrMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+  const scr = new THREE.Mesh(scrGeo, scrMat); scr.position.z = D / 2 + BT + 0.002; grp.add(scr);
+  const isl = new THREE.Mesh(new THREE.ShapeGeometry(rr(0.3, 0.085, 0.042), 10), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true }));
+  isl.position.set(0, Hh / 2 - 0.15, D / 2 + BT + 0.004); grp.add(isl);
+  // Rückseite: Glasfläche + Kamera-Plateau
+  const back = -(D / 2 + BT);
+  const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xd9662a, metalness: 0.2, roughness: 0.55, transparent: true });
+  const bg = new THREE.Mesh(new THREE.ShapeGeometry(rr(W - 0.22, 1.42, 0.12), 12), glassMat);
+  bg.rotation.y = Math.PI; bg.position.set(0, -0.36, back - 0.002); grp.add(bg);
+  const plat = new THREE.Mesh(new THREE.ExtrudeGeometry(rr(W - 0.04, 0.62, 0.14), { depth: 0.04, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 3 }), bodyMat);
+  plat.position.set(0, PY, back - 0.045); grp.add(plat);
+  const lensMat = new THREE.MeshPhysicalMaterial({ color: 0x05080e, metalness: 0.9, roughness: 0.08, clearcoat: 1 });
+  const ringMat = new THREE.MeshStandardMaterial({ color: 0xc9a07a, metalness: 1, roughness: 0.22 });
+  const lens = (x, y, rad) => {
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, 0.05, 40), ringMat); ring.rotation.x = Math.PI / 2;
+    const gl = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.74, rad * 0.74, 0.052, 40), lensMat); gl.rotation.x = Math.PI / 2;
+    ring.position.set(x, y, back - 0.08); gl.position.set(x, y, back - 0.082); grp.add(ring, gl); };
+  lens(-0.3, PY + 0.13, 0.108); lens(-0.3, PY - 0.13, 0.108); lens(-0.07, PY, 0.108);
+  const dotM = (x, y, rad, c) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, 0.02, 24), new THREE.MeshStandardMaterial({ color: c, roughness: 0.4 })); m.rotation.x = Math.PI / 2; m.position.set(x, y, back - 0.06); grp.add(m); };
+  dotM(0.32, PY + 0.13, 0.045, 0xf4e7c8); dotM(0.32, PY - 0.13, 0.05, 0x111418);
+  // Innenleben (nur Röntgenblick)
+  const inner = new THREE.Group(); inner.visible = false; grp.add(inner);
+  const boardMat = new THREE.MeshStandardMaterial({ color: 0x1f6f55, roughness: 0.6, emissive: 0x0b3326 });
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.03), boardMat); board.position.set(0, 0.55, 0); inner.add(board);
+  const chip = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.05), new THREE.MeshStandardMaterial({ color: 0x9aa7b8, metalness: 0.9, roughness: 0.3 })); chip.position.set(0.18, 0.62, 0.02); inner.add(chip);
+  const bat = new THREE.Mesh(new THREE.BoxGeometry(0.98, 1.2, 0.07), new THREE.MeshStandardMaterial({ color: 0x3a4250, metalness: 0.4, roughness: 0.5 })); bat.position.set(0, -0.42, 0); inner.add(bat);
+  const coil = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.03, 10, 48), new THREE.MeshStandardMaterial({ color: 0xc58b52, metalness: 1, roughness: 0.3 })); coil.position.set(0, -0.36, back + 0.02); inner.add(coil);
+  outer.position.y = 0.2; outer.scale.setScalar(0.92); scene.add(outer);
+  // Funkelpartikel
+  const N = 420, pp = new Float32Array(N * 3), pc = new Float32Array(N * 3);
+  const cols = [[1, .54, .24], [.54, .85, 1], [1, .9, .75]];
+  for (let i = 0; i < N; i++) {
+    const rad = 1.9 + Math.random() * 1.6, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+    pp.set([rad * Math.sin(ph) * Math.cos(th), rad * Math.cos(ph) * 0.8, rad * Math.sin(ph) * Math.sin(th)], i * 3);
+    pc.set(cols[i % 3], i * 3);
+  }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pp, 3)); pg.setAttribute('color', new THREE.BufferAttribute(pc, 3));
+  const sp = document.createElement('canvas'); sp.width = sp.height = 64; const sx = sp.getContext('2d');
+  const sgr = sx.createRadialGradient(32, 32, 0, 32, 32, 32); sgr.addColorStop(0, 'rgba(255,255,255,1)'); sgr.addColorStop(.3, 'rgba(255,255,255,.5)'); sgr.addColorStop(1, 'rgba(255,255,255,0)');
+  sx.fillStyle = sgr; sx.fillRect(0, 0, 64, 64);
+  const parts = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.07, map: new THREE.CanvasTexture(sp), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.85 }));
+  scene.add(parts);
+  // Bodenschatten
+  const sc = document.createElement('canvas'); sc.width = sc.height = 128; const scx = sc.getContext('2d');
+  const gr = scx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,120,40,.35)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  scx.fillStyle = gr; scx.fillRect(0, 0, 128, 128);
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 3.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.45; scene.add(shadow);
+
+  // Sperrbildschirm-Textur
+  const drawScreen = () => {
+    const g = tx.createLinearGradient(0, 0, 300, 626);
+    g.addColorStop(0, '#ff9a4d'); g.addColorStop(.35, '#d24d1e'); g.addColorStop(.75, '#3a1a3d'); g.addColorStop(1, '#0d1430');
+    tx.fillStyle = g; tx.fillRect(0, 0, 300, 626);
+    const d = new Date();
+    tx.fillStyle = 'rgba(255,255,255,.92)'; tx.textAlign = 'center';
+    tx.font = '500 20px -apple-system, system-ui, sans-serif';
+    tx.fillText(d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }), 150, 102);
+    tx.font = '700 92px ui-rounded, -apple-system, system-ui, sans-serif';
+    tx.fillText(d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }), 150, 190);
+    tx.strokeStyle = 'rgba(255,255,255,.55)'; tx.lineWidth = 3; tx.beginPath(); tx.arc(150, 430, 52, 0, Math.PI * 2); tx.stroke();
+    tx.beginPath(); tx.arc(150, 430, 18, 0, Math.PI * 2); tx.stroke();
+    const flat = Math.acos(clamp(Math.abs(S.u.z), 0, 1)) * R2D < 1;
+    tx.fillStyle = flat ? '#74e3b5' : '#ffffff';
+    tx.beginPath(); tx.arc(150 + clamp(S.u.x, -1, 1) * 44, 430 - clamp(S.u.y, -1, 1) * 44, 12, 0, Math.PI * 2); tx.fill();
+    tx.font = '600 18px -apple-system, system-ui, sans-serif'; tx.fillStyle = 'rgba(255,255,255,.8)';
+    tx.fillText(S.hasOri ? fmt(Math.acos(clamp(S.u.z, -1, 1)) * R2D) + '°' : 'Sensor Lab', 150, 520);
+    tex.needsUpdate = true;
+  };
+  drawScreen();
+  const fit = () => { const b = cv.parentElement.getBoundingClientRect(); r.setSize(b.width, b.height, false); cam.aspect = b.width / b.height; cam.updateProjectionMatrix(); };
+  new ResizeObserver(fit).observe(cv.parentElement); fit();
+
+  // Röntgen-Marker
+  const marks = $('#marks'), vtmp = new THREE.Vector3();
+  const mkEls = SENSORS.map((s, i) => { const b = document.createElement('button'); b.className = 'mk'; b.setAttribute('aria-label', s.n); b.style.display = 'none';
+    b.onclick = ev => { ev.stopPropagation(); showPop(i); }; marks.appendChild(b); return b; });
+  let sel = -1;
+  function showPop(i) {
+    sel = i; mkEls.forEach((m, k) => m.classList.toggle('sel', k === i));
+    const s = SENSORS[i]; $('#popT').textContent = s.n; $('#popP').textContent = s.t;
+    const a = $('#popA'); a.innerHTML = '';
+    if (s.tool) { const b = document.createElement('button'); b.className = 'btn primary'; b.textContent = 'Ausprobieren'; b.onclick = () => openTool(s.tool); a.appendChild(b); }
+    const c = document.createElement('button'); c.className = 'btn'; c.textContent = 'Schließen'; c.onclick = hidePop; a.appendChild(c);
+    $('#pop').classList.add('show'); $('#hint').style.opacity = 0;
+  }
+  function hidePop() { sel = -1; mkEls.forEach(m => m.classList.remove('sel')); $('#pop').classList.remove('show'); $('#hint').style.opacity = 1; }
+  HERO.setXray = on => {
+    HERO.xray = on; inner.visible = on;
+    [bodyMat, glassMat].forEach(m => { m.transparent = true; m.opacity = on ? 0.13 : 1; m.depthWrite = !on; m.needsUpdate = true; });
+    scrMat.opacity = on ? 0.15 : 1; isl.material.opacity = on ? 0.2 : 1;
+    mkEls.forEach(m => m.style.display = on ? 'block' : 'none');
+    $('#hint').textContent = on ? 'Tippe auf einen leuchtenden Punkt.' : 'Wische zum Drehen. Röntgenblick zeigt, wo die Sensoren sitzen.';
+    if (!on) hidePop();
+    $('#hXray').classList.toggle('on', on);
+  };
+  // Wischen zum Drehen
+  let drag = null;
+  const hero = $('#hero');
+  hero.addEventListener('pointerdown', e => { if (e.target.closest('button,#pop')) return; drag = { x: e.clientX, y0: HERO.yaw }; });
+  addEventListener('pointermove', e => { if (drag) HERO.yaw = drag.y0 + (e.clientX - drag.x) * 0.012; });
+  addEventListener('pointerup', () => drag = null); addEventListener('pointercancel', () => drag = null);
+
+  const qConv = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  const eu = new THREE.Euler(), qd = new THREE.Quaternion(), qt = new THREE.Quaternion();
+  let lastTex = 0;
+  HERO.ok = true;
+  HERO.render = t => {
+    if (S.hasOri && !HERO.xray) {
+      eu.set(S.b * D2R, S.g * D2R, (S.a - (S.alpha0 || 0)) * D2R, 'ZXY');
+      qd.setFromEuler(eu); qt.copy(qConv).multiply(qd);
+      grp.quaternion.slerp(qt, 0.25);
+    } else {
+      eu.set(-0.25, Math.PI + Math.sin(t * 0.0003) * 0.5, 0, 'XYZ');
+      if (!HERO.xray) eu.y = t * 0.0004;
+      qt.setFromEuler(eu); grp.quaternion.slerp(qt, HERO.xray ? 0.15 : 0.06);
+    }
+    outer.rotation.y += (HERO.yaw - outer.rotation.y) * 0.2;
+    outer.position.y = 0.2 + Math.sin(t * 0.0012) * 0.04;
+    parts.rotation.y = t * 0.00006 - S.u.x * 0.3; parts.rotation.x = S.u.y * 0.2;
+    if (t - lastTex > 250) { drawScreen(); lastTex = t; }
+    r.render(scene, cam);
+    if (HERO.xray) {
+      const b = cv.getBoundingClientRect();
+      SENSORS.forEach((s, i) => { vtmp.set(...s.p).applyMatrix4(grp.matrixWorld).project(cam);
+        mkEls[i].style.left = ((vtmp.x + 1) / 2 * b.width) + 'px'; mkEls[i].style.top = ((1 - vtmp.y) / 2 * b.height) + 'px'; });
+    }
+  };
+}
+
+/* ================= Kamera & KI: Werkzeuge ================= */
+const TOOLS = {};
+const COCO = ('person:Mensch:🧑|bicycle:Fahrrad:🚲|car:Auto:🚗|motorcycle:Motorrad:🏍️|airplane:Flugzeug:✈️|bus:Bus:🚌|train:Zug:🚆|truck:Lastwagen:🚚|boat:Boot:⛵|traffic light:Ampel:🚦|' +
+  'fire hydrant:Hydrant:🧯|stop sign:Stoppschild:🛑|parking meter:Parkuhr:🅿️|bench:Bank:🪑|bird:Vogel:🐦|cat:Katze:🐈|dog:Hund:🐕|horse:Pferd:🐎|sheep:Schaf:🐑|cow:Kuh:🐄|' +
+  'elephant:Elefant:🐘|bear:Bär:🐻|zebra:Zebra:🦓|giraffe:Giraffe:🦒|backpack:Rucksack:🎒|umbrella:Regenschirm:☂️|handbag:Handtasche:👜|tie:Krawatte:👔|suitcase:Koffer:🧳|frisbee:Frisbee:🥏|' +
+  'skis:Ski:🎿|snowboard:Snowboard:🏂|sports ball:Ball:⚽|kite:Drachen:🪁|baseball bat:Baseballschläger:🏏|baseball glove:Baseballhandschuh:🧤|skateboard:Skateboard:🛹|surfboard:Surfbrett:🏄|tennis racket:Tennisschläger:🎾|bottle:Flasche:🍾|' +
+  'wine glass:Weinglas:🍷|cup:Tasse:☕|fork:Gabel:🍴|knife:Messer:🔪|spoon:Löffel:🥄|bowl:Schüssel:🥣|banana:Banane:🍌|apple:Apfel:🍎|sandwich:Sandwich:🥪|orange:Orange:🍊|' +
+  'broccoli:Brokkoli:🥦|carrot:Karotte:🥕|hot dog:Hotdog:🌭|pizza:Pizza:🍕|donut:Donut:🍩|cake:Kuchen:🍰|chair:Stuhl:🪑|couch:Sofa:🛋️|potted plant:Topfpflanze:🪴|bed:Bett:🛏️|' +
+  'dining table:Tisch:🍽️|toilet:Toilette:🚽|tv:Fernseher:📺|laptop:Laptop:💻|mouse:Maus:🖱️|remote:Fernbedienung:🎛️|keyboard:Tastatur:⌨️|cell phone:Handy:📱|microwave:Mikrowelle:♨️|oven:Backofen:🔥|' +
+  'toaster:Toaster:🍞|sink:Waschbecken:🚰|refrigerator:Kühlschrank:🧊|book:Buch:📖|clock:Uhr:🕐|vase:Vase:🏺|scissors:Schere:✂️|teddy bear:Teddybär:🧸|hair drier:Föhn:💨|toothbrush:Zahnbürste:🪥')
+  .split('|').map(s => s.split(':'));
+const COCO_MAP = Object.fromEntries(COCO.map(([en, de, em]) => [en, { de, em }]));
+
+const bsMap = res => { const o = {}; const c = res && res.faceBlendshapes && res.faceBlendshapes[0]; if (c) for (const k of c.categories) o[k.categoryName] = k.score; return o; };
+function aiLoadMsg(name, size) { stageMsg(`<b>KI wird geladen…</b>${name}, ca. ${size}. Nur beim ersten Mal.`); }
+async function aiOpen(tool, kind, facing, name, size) {
+  addVideo(); mkCanvas(); stageMsg('<b>Kamera startet…</b>');
+  if (!await camStart(facing)) { stageMsg('<b>Keine Kamera</b>' + CAM.err); return false; }
+  aiLoadMsg(name, size);
+  try { tool.task = await makeTask(kind); stageMsg(null); }
+  catch (e) { stageMsg('<b>KI konnte nicht geladen werden</b>Internetverbindung prüfen. (' + (e.message || e) + ')'); return false; }
+  tool.res = null; tool.fpsN = 0; tool.fpsT = performance.now(); tool.fps = 0; lastVT = -1;
+  return true;
+}
+function aiTick(tool) {
+  const r = detect(tool.task);
+  if (r) { tool.res = r; tool.fpsN++; }
+  const now = performance.now(); if (now - tool.fpsT > 1000) { tool.fps = tool.fpsN * 1000 / (now - tool.fpsT); tool.fpsN = 0; tool.fpsT = now; }
+}
+
+TOOLS.face = {
+  title: 'Face-ID-Blick', modes: ['Punktprojektor', '3D-Netz', '3D-Kopf', 'Laseraugen', 'Verkleidung', 'Mimik'], mode: 0,
+  note: 'Die KI legt 478 Punkte auf dein Gesicht, ähnlich wie der Punktprojektor von Face ID. Laseraugen: Mund weit auf! Alles bleibt auf dem iPhone.',
+  async open() { await aiOpen(this, 'face', 'user', 'Gesichtsmodell', '4 MB'); },
+  close() { camStop(); },
+  actions: [['Foto teilen', () => shareComposite()]],
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (!this.task || !camReady()) return;
+    aiTick(this);
+    const lm = this.res && this.res.faceLandmarks && this.res.faceLandmarks[0];
+    const m = coverMap(w, h), mode = this.mode;
+    if (!lm) { if (mode === 2) { ctx.fillStyle = '#050d19'; ctx.fillRect(0, 0, w, h); }
+      centerText(ctx, 'Gesicht in die Kamera halten', w / 2, h - 36, FONT(600, 16), TXT); return; }
+    const P = i => [m.x(lm[i].x), m.y(lm[i].y)];
+    const V = AI.mod.FaceLandmarker, bs = bsMap(this.res);
+    if (mode === 0) {
+      ctx.fillStyle = 'rgba(3,6,14,.74)'; ctx.fillRect(0, 0, w, h);
+      const yS = (t * 0.28) % (h + 240) - 120;
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < lm.length; i++) {
+        const [x, y] = P(i), near = Math.max(0, 1 - Math.abs(y - yS) / 70), dep = clamp(0.55 - lm[i].z * 9, 0.25, 1);
+        ctx.fillStyle = `rgba(255,${60 + near * 150 | 0},${90 + near * 100 | 0},${0.35 * dep + near * 0.6})`;
+        ctx.beginPath(); ctx.arc(x, y, 1.3 + near * 2.4, 0, 6.283); ctx.fill();
+      }
+      const g = ctx.createLinearGradient(0, yS - 30, 0, yS + 30); g.addColorStop(0, 'rgba(255,80,120,0)'); g.addColorStop(.5, 'rgba(255,80,120,.25)'); g.addColorStop(1, 'rgba(255,80,120,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, yS - 30, w, 60);
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (mode === 1) {
+      ctx.fillStyle = 'rgba(3,6,14,.3)'; ctx.fillRect(0, 0, w, h);
+      const lines = (conns, col, lw) => { if (!conns) return; ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath();
+        for (const c of conns) { const a = P(c.start), b = P(c.end); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); } ctx.stroke(); };
+      lines(V.FACE_LANDMARKS_TESSELATION, 'rgba(138,217,255,.45)', 0.7);
+      for (const k of ['FACE_LANDMARKS_FACE_OVAL', 'FACE_LANDMARKS_LIPS', 'FACE_LANDMARKS_LEFT_EYE', 'FACE_LANDMARKS_RIGHT_EYE', 'FACE_LANDMARKS_LEFT_EYEBROW', 'FACE_LANDMARKS_RIGHT_EYEBROW', 'FACE_LANDMARKS_LEFT_IRIS', 'FACE_LANDMARKS_RIGHT_IRIS'])
+        lines(V[k], ORA, 2.2);
+    } else if (mode === 2) {
+      ctx.fillStyle = '#050d19'; ctx.fillRect(0, 0, w, h);
+      const vw = m.vw, vh = m.vh; let cx = 0, cy = 0, cz = 0, mnx = 1e9, mxx = -1e9;
+      const X = lm.map(p => p.x * vw), Y = lm.map(p => p.y * vh), Z = lm.map(p => p.z * vw);
+      for (let i = 0; i < lm.length; i++) { cx += X[i]; cy += Y[i]; cz += Z[i]; mnx = Math.min(mnx, X[i]); mxx = Math.max(mxx, X[i]); }
+      cx /= lm.length; cy /= lm.length; cz /= lm.length;
+      const s = Math.min(w, h) * 0.62 / (mxx - mnx), ang = Math.sin(t * 0.0009) * 1.25 + (this.drag || 0), ca = Math.cos(ang), sa = Math.sin(ang);
+      const mir = CAM.facing === 'user' ? -1 : 1, px = [], py = [], pz = [];
+      for (let i = 0; i < lm.length; i++) { const dx = (X[i] - cx) * mir, dz = (Z[i] - cz);
+        px.push(w / 2 + (dx * ca - dz * sa) * s); pz.push(dx * sa + dz * ca); py.push(h / 2 + (Y[i] - cy) * s); }
+      ctx.strokeStyle = 'rgba(138,217,255,.16)'; ctx.lineWidth = 0.7; ctx.beginPath();
+      for (const c of V.FACE_LANDMARKS_TESSELATION) { ctx.moveTo(px[c.start], py[c.start]); ctx.lineTo(px[c.end], py[c.end]); } ctx.stroke();
+      const zr = (mxx - mnx) * 0.5;
+      for (let i = 0; i < lm.length; i++) { const k = clamp(0.5 - pz[i] / zr, 0, 1);
+        ctx.fillStyle = `rgb(${138 + k * 117 | 0},${217 - k * 79 | 0},${255 - k * 194 | 0})`; ctx.fillRect(px[i] - 1.5, py[i] - 1.5, 3, 3); }
+      centerText(ctx, 'Dein Gesicht als 3D-Modell', w / 2, 28, FONT(600, 15), MUT);
+    } else if (mode === 3) {
+      const jaw = bs.jawOpen || 0, eyes = [P(468), P(473)], fc = P(1);
+      ctx.globalCompositeOperation = 'lighter';
+      for (const [ex, ey] of eyes) {
+        const gl = ctx.createRadialGradient(ex, ey, 0, ex, ey, 26 + jaw * 30); gl.addColorStop(0, 'rgba(255,255,255,.95)'); gl.addColorStop(.3, 'rgba(255,40,40,.8)'); gl.addColorStop(1, 'rgba(255,0,0,0)');
+        ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(ex, ey, 26 + jaw * 30, 0, 6.283); ctx.fill();
+        if (jaw > 0.3) {
+          let dx = ex - fc[0], dy = ey - fc[1] - 60; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+          const L = Math.max(w, h) * 1.5, fl = 0.8 + Math.random() * 0.4;
+          [[22, 'rgba(255,30,30,.22)'], [10, 'rgba(255,70,50,.6)'], [3.5, 'rgba(255,255,255,.95)']].forEach(([lw, col]) => {
+            ctx.strokeStyle = col; ctx.lineWidth = lw * fl; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + dx * L, ey + dy * L); ctx.stroke(); });
+        }
+      }
+      ctx.globalCompositeOperation = 'source-over';
+      if (jaw <= 0.3) centerText(ctx, 'Mund weit auf für Laser', w / 2, h - 36, FONT(600, 16), TXT);
+    } else if (mode === 4) {
+      const a = P(33), b = P(263), cxe = (a[0] + b[0]) / 2, cye = (a[1] + b[1]) / 2, d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      let ang = Math.atan2(b[1] - a[1], b[0] - a[0]); if (b[0] < a[0]) ang += Math.PI;
+      const emo = (e, x, y, s) => { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.font = `${s}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(e, 0, 0); ctx.restore(); };
+      const top = P(10), nose = P(1);
+      emo('👑', top[0] + Math.sin(ang) * d * 0.55, top[1] - Math.cos(ang) * d * 0.55, d * 1.25);
+      emo('🕶️', cxe, cye, d * 1.55);
+      const nr = d * 0.17, ng = ctx.createRadialGradient(nose[0] - nr * .3, nose[1] - nr * .3, 1, nose[0], nose[1], nr);
+      ng.addColorStop(0, '#ff8b8b'); ng.addColorStop(1, '#d8101c'); ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(nose[0], nose[1], nr, 0, 6.283); ctx.fill();
+    } else if (mode === 5) {
+      ctx.fillStyle = 'rgba(3,6,14,.35)'; ctx.fillRect(0, 0, w, h);
+      const v = { 'Lächeln': ((bs.mouthSmileLeft || 0) + (bs.mouthSmileRight || 0)) / 2, 'Mund auf': bs.jawOpen || 0, 'Staunen': bs.browInnerUp || 0,
+        'Zwinkern': Math.abs((bs.eyeBlinkLeft || 0) - (bs.eyeBlinkRight || 0)), 'Kussmund': bs.mouthPucker || 0, 'Backen': bs.cheekPuff || 0 };
+      const em = { 'Lächeln': '😄', 'Mund auf': '😮', 'Staunen': '🤨', 'Zwinkern': '😉', 'Kussmund': '😗', 'Backen': '🐡' };
+      let best = 'x', bv = 0.3; for (const k in v) if (v[k] > bv) { bv = v[k]; best = k; }
+      ctx.font = '74px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(em[best] || '😐', w / 2, 62);
+      const keys = Object.keys(v), bh = 26, y0 = h - keys.length * (bh + 8) - 10;
+      keys.forEach((k, i) => { const y = y0 + i * (bh + 8), bw = w - 150;
+        ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.roundRect(130, y, bw, bh, 13); ctx.fill();
+        ctx.fillStyle = k === best ? ORA : ICE; ctx.beginPath(); ctx.roundRect(130, y, Math.max(bh, bw * clamp(v[k], 0, 1)), bh, 13); ctx.fill();
+        ctx.font = FONT(600, 14); ctx.fillStyle = TXT; ctx.textAlign = 'right'; ctx.fillText(k, 120, y + bh / 2); });
+    }
+  },
+  stats() { const ok = this.res && this.res.faceLandmarks && this.res.faceLandmarks.length; return [['Gesichtspunkte', ok ? '478' : '0'], ['KI-Bilder/s', fmt(this.fps)]]; }
+};
+
+TOOLS.hand = {
+  title: 'Hand-Magie', modes: ['Malen', 'Finger zählen', 'Funken'], mode: 0,
+  note: 'Malen: nur den Zeigefinger ausstrecken. Offene Hand eine Sekunde zeigen löscht das Bild. Funken sprühen aus jeder ausgestreckten Fingerspitze.',
+  async open() { this.parts = []; this.last = {}; this.palm = 0; this.count = 0; this.paint = null; await aiOpen(this, 'hand', 'user', 'Handmodell', '8 MB'); },
+  close() { camStop(); },
+  actions: [['Kamera wechseln', () => switchCam()], ['Löschen', () => { const p = TOOLS.hand.paint; if (p) p.getContext('2d').clearRect(0, 0, p.width, p.height); }], ['Foto teilen', () => shareComposite(TOOLS.hand.paint)]],
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (!this.paint || this.paint.width !== C.cv.width) { this.paint = document.createElement('canvas'); this.paint.width = C.cv.width; this.paint.height = C.cv.height; }
+    const pc = this.paint.getContext('2d'), dpr = C.cv.width / w;
+    ctx.drawImage(this.paint, 0, 0, w, h);
+    if (!this.task || !camReady()) return;
+    aiTick(this);
+    const hands = (this.res && this.res.landmarks) || [], m = coverMap(w, h), V = AI.mod.HandLandmarker;
+    let total = 0, anyPalm = false;
+    hands.forEach((L, hi) => {
+      const P = L.map(p => [m.x(p.x), m.y(p.y)]), d = (a, b) => Math.hypot(P[a][0] - P[b][0], P[a][1] - P[b][1]);
+      const ext = [d(4, 17) > d(3, 17) * 1.08 && d(4, 5) > d(3, 5) * 0.9, ...[[8, 6], [12, 10], [16, 14], [20, 18]].map(([a, b]) => d(a, 0) > d(b, 0) * 1.12)];
+      const n = ext.filter(Boolean).length; total += n;
+      ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 3; ctx.beginPath();
+      for (const c of V.HAND_CONNECTIONS) { ctx.moveTo(P[c.start][0], P[c.start][1]); ctx.lineTo(P[c.end][0], P[c.end][1]); } ctx.stroke();
+      ctx.fillStyle = ORA; for (const [x, y] of P) { ctx.beginPath(); ctx.arc(x, y, 4, 0, 6.283); ctx.fill(); }
+      if (n === 5) anyPalm = true;
+      if (this.mode === 0) {
+        const draw = ext[1] && !ext[2] && !ext[3] && !ext[4], tip = P[8];
+        if (draw) {
+          const col = `hsl(${(t * 0.12) % 360},100%,62%)`, l = this.last[hi];
+          pc.save(); pc.scale(dpr, dpr); pc.strokeStyle = col; pc.lineWidth = 10; pc.lineCap = 'round'; pc.shadowColor = col; pc.shadowBlur = 16;
+          pc.beginPath(); pc.moveTo(l ? l[0] : tip[0], l ? l[1] : tip[1]); pc.lineTo(tip[0], tip[1]); pc.stroke(); pc.restore();
+          this.last[hi] = tip;
+          ctx.fillStyle = col; ctx.beginPath(); ctx.arc(tip[0], tip[1], 10, 0, 6.283); ctx.fill();
+        } else this.last[hi] = null;
+      } else if (this.mode === 1) {
+        centerText(ctx, String(n), P[0][0], P[0][1] + 34, FONT(700, 30), ORA);
+      } else {
+        [4, 8, 12, 16, 20].forEach((tp, k) => { if (!ext[k]) return;
+          for (let j = 0; j < 3; j++) this.parts.push({ x: P[tp][0], y: P[tp][1], vx: (Math.random() - .5) * 5, vy: -Math.random() * 4 - 1, life: 1, hue: (t * 0.1 + k * 60) % 360 }); });
+      }
+    });
+    if (this.mode === 0) {
+      if (anyPalm) { if (!this.palm) this.palm = t; else if (t - this.palm > 900) { pc.clearRect(0, 0, this.paint.width, this.paint.height); this.palm = 0; this.flash = t; } }
+      else this.palm = 0;
+      if (this.flash && t - this.flash < 300) { ctx.fillStyle = `rgba(255,255,255,${0.5 * (1 - (t - this.flash) / 300)})`; ctx.fillRect(0, 0, w, h); }
+      if (!hands.length) centerText(ctx, 'Hand in die Kamera halten', w / 2, h - 36, FONT(600, 16), TXT);
+    }
+    if (this.mode === 1) { this.count = total; centerText(ctx, hands.length ? String(total) : '–', w / 2, 70, FONT(800, 84), TXT);
+      centerText(ctx, hands.length ? 'Finger' : 'Hände zeigen', w / 2, 126, FONT(600, 17), MUT); }
+    if (this.mode === 2) {
+      ctx.globalCompositeOperation = 'lighter';
+      this.parts = this.parts.filter(p => (p.life -= 0.02) > 0);
+      if (this.parts.length > 1200) this.parts.splice(0, this.parts.length - 1200);
+      for (const p of this.parts) { p.x += p.vx; p.y += p.vy; p.vy += 0.15;
+        ctx.fillStyle = `hsla(${p.hue},100%,62%,${p.life})`; ctx.beginPath(); ctx.arc(p.x, p.y, 2 + p.life * 3, 0, 6.283); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  },
+  stats() { return [['Hände', String((this.res && this.res.landmarks || []).length)], ['KI-Bilder/s', fmt(this.fps)]]; }
+};
+
+TOOLS.objects = {
+  title: 'Was sieht die Kamera?',
+  note: 'Die KI erkennt 80 Alltagsdinge, von der Banane bis zum Fernseher. Jedes neue Ding kommt in deine Sammlung. Schaffst du alle 80?',
+  async open() { this.found = new Set(store.get('sl-found', [])); this.toast = null; this.showList = false; await aiOpen(this, 'obj', 'environment', 'Objektmodell', '5 MB'); },
+  close() { camStop(); },
+  actions: [['Kamera wechseln', () => switchCam()], ['Sammlung', () => { const o = TOOLS.objects; o.showList = !o.showList; }]],
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (this.showList) {
+      ctx.fillStyle = 'rgba(5,13,25,.92)'; ctx.fillRect(0, 0, w, h);
+      const cols = 8, cs = (w - 24) / cols;
+      centerText(ctx, `Sammlung: ${this.found.size} / 80`, w / 2, 26, FONT(700, 18), TXT);
+      COCO.forEach(([en, de, em], i) => { const x = 12 + (i % cols) * cs + cs / 2, y = 56 + Math.floor(i / cols) * cs + cs / 2;
+        ctx.globalAlpha = this.found.has(en) ? 1 : 0.18; ctx.font = `${cs * 0.6}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(this.found.has(en) ? em : '❓', x, y); ctx.globalAlpha = 1; });
+      return;
+    }
+    if (!this.task || !camReady()) return;
+    aiTick(this);
+    const m = coverMap(w, h), dets = (this.res && this.res.detections) || [];
+    for (const d of dets) {
+      const c = d.categories[0], info = COCO_MAP[c.categoryName] || { de: c.categoryName, em: '🔹' }, bb = d.boundingBox;
+      let x0 = m.x(bb.originX / m.vw), x1 = m.x((bb.originX + bb.width) / m.vw); if (x1 < x0) [x0, x1] = [x1, x0];
+      const y0 = m.y(bb.originY / m.vh), y1 = m.y((bb.originY + bb.height) / m.vh);
+      ctx.strokeStyle = ORA; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x0, y0, x1 - x0, y1 - y0, 14); ctx.stroke();
+      const lab = `${info.em} ${info.de} ${Math.round(c.score * 100)} %`; ctx.font = FONT(700, 16);
+      const tw = ctx.measureText(lab).width + 18, ly = Math.max(4, y0 - 34), lx = clamp(x0, 4, w - tw - 4);
+      ctx.fillStyle = ORA; ctx.beginPath(); ctx.roundRect(lx, ly, tw, 28, 14); ctx.fill();
+      ctx.fillStyle = '#2a1206'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(lab, lx + 9, ly + 14);
+      if (COCO_MAP[c.categoryName] && !this.found.has(c.categoryName)) {
+        this.found.add(c.categoryName); store.set('sl-found', [...this.found]); this.toast = { txt: `Neu in der Sammlung: ${info.em} ${info.de}`, t };
+      }
+    }
+    if (this.toast && t - this.toast.t < 2500) {
+      ctx.font = FONT(700, 16); const tw = ctx.measureText(this.toast.txt).width + 30;
+      ctx.fillStyle = 'rgba(116,227,181,.95)'; ctx.beginPath(); ctx.roundRect(w / 2 - tw / 2, 14, tw, 38, 19); ctx.fill();
+      centerText(ctx, this.toast.txt, w / 2, 33, FONT(700, 16), '#06241a');
+    }
+  },
+  stats() { return [['Im Bild', String((this.res && this.res.detections || []).length)], ['Sammlung', (this.found ? this.found.size : 0) + ' / 80'], ['KI-Bilder/s', fmt(this.fps)]]; }
+};
+
+/* ---------- KI-Tiefenscan ---------- */
+let DEPTH = null;
+const TF_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/dist/transformers.min.js';
+async function getDepth(onProg) {
+  if (DEPTH) return DEPTH;
+  const TF = await import(TF_URL);
+  const files = {};
+  const prog = p => { if (p.status === 'progress' && p.total) { files[p.file] = [p.loaded, p.total];
+    let a = 0, b = 0; for (const k in files) { a += files[k][0]; b += files[k][1]; } onProg(a, b); } };
+  const id = 'onnx-community/depth-anything-v2-small';
+  if (navigator.gpu) { try { DEPTH = await TF.pipeline('depth-estimation', id, { device: 'webgpu', dtype: 'fp16', progress_callback: prog }); return DEPTH; } catch (e) {} }
+  DEPTH = await TF.pipeline('depth-estimation', id, { device: 'wasm', dtype: 'q8', progress_callback: prog });
+  return DEPTH;
+}
+function depthPal(v) {
+  const s = [[0, [48, 18, 59]], [.25, [40, 140, 240]], [.5, [30, 230, 160]], [.7, [240, 220, 40]], [.85, [250, 120, 30]], [1, [200, 20, 20]]];
+  for (let i = 1; i < s.length; i++) if (v <= s[i][0]) { const [a, ca] = s[i - 1], [b, cb] = s[i], k = (v - a) / (b - a); return ca.map((c, j) => c + (cb[j] - c) * k); }
+  return s[s.length - 1][1];
+}
+TOOLS.depth = {
+  title: 'KI-Tiefenscan', noCanvas: true, modes: ['Punktwolke', 'Tiefenkarte'], mode: 0,
+  note: 'Echter LiDAR ist im Browser gesperrt. Stattdessen schätzt eine KI aus einem Foto, wie weit alles entfernt ist. Danach mit dem Finger drehen. Tipp: Dinge im Vordergrund und etwas Abstand zur Wand.',
+  async open() { this.state = 'live'; this.rx = 0; this.ry = 0; addVideo(); stageMsg('<b>Kamera startet…</b>');
+    if (!await camStart('environment')) return stageMsg('<b>Keine Kamera</b>' + CAM.err); stageMsg(null);
+    const lab = document.createElement('div'); lab.className = 'lab'; lab.innerHTML = '<b style="font-size:18px">Motiv anvisieren und „Scannen“ tippen</b>'; stage.appendChild(lab); },
+  close() { camStop(); this.dispose(); },
+  dispose() { if (this.r) { this.r.dispose(); this.geo && this.geo.dispose(); this.r = null; } if (this.offDrag) this.offDrag(); },
+  actions: [['Scannen', () => TOOLS.depth.scan()], ['Neuer Scan', () => reopenTool()]],
+  async scan() {
+    if (this.state !== 'live' || !camReady()) return;
+    const v = CAM.vid, sc = Math.min(1, 518 / Math.max(v.videoWidth, v.videoHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(v.videoWidth * sc); c.height = Math.round(v.videoHeight * sc);
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    this.photo = c; this.state = 'busy'; camStop(); stage.innerHTML = '';
+    stageMsg('<b>KI wird geladen…</b>Tiefenmodell, beim ersten Mal ca. 25–50 MB');
+    try {
+      const pipe = await getDepth((a, b) => stageMsg(`<b>KI wird geladen… ${Math.round(a / b * 100)} %</b>${fmt(a / 1048576, 1)} von ${fmt(b / 1048576, 1)} MB`));
+      stageMsg('<b>Berechne Tiefe…</b>Das dauert ein paar Sekunden.');
+      const out = await pipe(c.toDataURL('image/jpeg', 0.92));
+      this.dimg = out.depth; this.build(); this.state = 'result'; stageMsg(null);
+    } catch (e) { this.state = 'err'; stageMsg('<b>Tiefenscan fehlgeschlagen</b>' + (e.message || e)); }
+  },
+  build() {
+    const d = this.dimg, dw = d.width, dh = d.height, ch = d.channels || 1, dd = d.data;
+    const map = document.createElement('canvas'); map.width = dw; map.height = dh;
+    const mx = map.getContext('2d'), id = mx.createImageData(dw, dh);
+    for (let i = 0; i < dw * dh; i++) { const c = depthPal(dd[i * ch] / 255); id.data.set([c[0], c[1], c[2], 255], i * 4); }
+    mx.putImageData(id, 0, 0); this.map = map;
+    const T = HERO.T; if (!T) { this.mode = 1; return; }
+    const cv = document.createElement('canvas'); stage.appendChild(cv);
+    const r = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); r.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); r.outputColorSpace = T.SRGBColorSpace;
+    const sc = new T.Scene(), cam = new T.PerspectiveCamera(40, 1, 0.01, 50); cam.position.set(0, 0, 3.4);
+    const pw = this.photo.width, ph = this.photo.height, px = this.photo.getContext('2d').getImageData(0, 0, pw, ph).data;
+    const step = Math.max(1, Math.round(dw / 200)), asp = dw / dh, pos = [], col = [], cc = new T.Color();
+    for (let y = 0; y < dh; y += step) for (let x = 0; x < dw; x += step) {
+      const v = dd[(y * dw + x) * ch] / 255, persp = 1 + (1 - v) * 0.6;
+      pos.push((x / dw - .5) * 2 * asp * persp, -(y / dh - .5) * 2 * persp, v * 1.6 - 0.8);
+      const pi = ((Math.floor(y * ph / dh)) * pw + Math.floor(x * pw / dw)) * 4;
+      cc.setRGB(px[pi] / 255, px[pi + 1] / 255, px[pi + 2] / 255, T.SRGBColorSpace); col.push(cc.r, cc.g, cc.b);
+    }
+    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new T.Float32BufferAttribute(col, 3));
+    const pts = new T.Points(geo, new T.PointsMaterial({ size: 0.022, vertexColors: true })); sc.add(pts);
+    this.r = r; this.sc = sc; this.cam = cam; this.pts = pts; this.geo = geo; this.cv = cv;
+    let dg = null;
+    const dn = e => { dg = { x: e.clientX, y: e.clientY, rx: this.rx, ry: this.ry }; }, mv = e => { if (!dg) return; this.ry = dg.ry + (e.clientX - dg.x) * 0.008; this.rx = clamp(dg.rx + (e.clientY - dg.y) * 0.006, -1, 1); this.touched = performance.now(); }, up = () => dg = null;
+    stage.addEventListener('pointerdown', dn); addEventListener('pointermove', mv); addEventListener('pointerup', up);
+    this.offDrag = () => { stage.removeEventListener('pointerdown', dn); removeEventListener('pointermove', mv); removeEventListener('pointerup', up); };
+  },
+  draw(t) {
+    if (this.state !== 'result') return;
+    const b = stage.getBoundingClientRect();
+    if (this.cv) this.cv.style.display = this.mode === 0 ? 'block' : 'none';
+    if (this.mode === 0 && this.r) {
+      if (this.r.domElement.width !== Math.round(b.width * this.r.getPixelRatio())) { this.r.setSize(b.width, b.height, false); this.cam.aspect = b.width / b.height; this.cam.updateProjectionMatrix(); }
+      const idle = !this.touched || performance.now() - this.touched > 2500;
+      this.pts.rotation.y += ((idle ? Math.sin(t * 0.0007) * 0.6 : 0) + this.ry - this.pts.rotation.y) * 0.1;
+      this.pts.rotation.x += (this.rx - this.pts.rotation.x) * 0.1;
+      this.r.render(this.sc, this.cam);
+    } else if (this.mode === 1 && this.map) {
+      if (!C) mkCanvas();
+      const { ctx, w, h } = C, mw = this.map.width, mh = this.map.height, s = Math.min(w / mw, h / mh);
+      ctx.clearRect(0, 0, w, h); ctx.drawImage(this.map, (w - mw * s) / 2, (h - mh * s) / 2, mw * s, mh * s);
+      centerText(ctx, 'Rot = nah, Lila = weit weg', w / 2, h - 22, FONT(600, 14), TXT);
+    }
+    if (C) C.cv.style.display = this.mode === 1 ? 'block' : 'none';
+  },
+  stats() { return this.state === 'result' ? [['Punkte', fmt(this.geo ? this.geo.attributes.position.count : 0)], ['Rechner', navigator.gpu ? 'Grafikchip' : 'Prozessor']] : []; }
+};
+
+/* ---------- Kamera-Filter ---------- */
+const FRAG = `precision mediump float;varying vec2 vUv;uniform sampler2D tex;uniform vec4 crop;uniform float mirror;uniform int mode;uniform float time;uniform vec2 texel;
+float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
+vec3 samp(vec2 u){return texture2D(tex,u).rgb;}
+vec3 heat(float t){t=clamp(t,0.,1.);vec3 c=mix(vec3(0.,0.,.15),vec3(.25,0.,.6),smoothstep(0.,.2,t));c=mix(c,vec3(.85,0.,.35),smoothstep(.2,.45,t));
+c=mix(c,vec3(1.,.45,0.),smoothstep(.45,.7,t));c=mix(c,vec3(1.,.95,.2),smoothstep(.7,.88,t));return mix(c,vec3(1.),smoothstep(.88,1.,t));}
+float rnd(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+float edge(vec2 u){float tl=lum(samp(u+texel*vec2(-1.,1.))),tt=lum(samp(u+texel*vec2(0.,1.))),tr=lum(samp(u+texel*vec2(1.,1.))),l=lum(samp(u+texel*vec2(-1.,0.))),
+r=lum(samp(u+texel*vec2(1.,0.))),bl=lum(samp(u+texel*vec2(-1.,-1.))),b=lum(samp(u+texel*vec2(0.,-1.))),br=lum(samp(u+texel*vec2(1.,-1.)));
+return length(vec2(-tl-2.*l-bl+tr+2.*r+br,-tl-2.*tt-tr+bl+2.*b+br));}
+void main(){vec2 uv=vUv;if(mirror>.5)uv.x=1.-uv.x;uv=crop.xy+uv*crop.zw;vec3 c=samp(uv);float L=lum(c);vec3 o;
+if(mode==0){o=heat(pow(L,1.1));}
+else if(mode==1){float n=rnd(vUv*vec2(731.,577.)+time);float v=clamp(L*2.2+.05,0.,1.);o=vec3(.15,1.,.25)*v+(n-.5)*.18;o*=.85+.15*sin(vUv.y*900.);o*=smoothstep(.95,.35,length(vUv-.5)*1.4);}
+else if(mode==2){float e=edge(uv);o=vec3(.55,.8,1.)*(1.-L)*.55+vec3(.7,.9,1.)*e*2.2;}
+else{vec3 q=floor(c*4.+.5)/4.;float e=edge(uv);o=e>.35?vec3(0.):q*1.1;}
+gl_FragColor=vec4(o,1.);}`;
+function glFilter(cv) {
+  const gl = cv.getContext('webgl', { preserveDrawingBuffer: true }); if (!gl) return null;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const pr = gl.createProgram();
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, 'attribute vec2 p;varying vec2 vUv;void main(){vUv=p*.5+.5;gl_Position=vec4(p,0.,1.);}'));
+  gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FRAG)); gl.linkProgram(pr); gl.useProgram(pr);
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  const U = n => gl.getUniformLocation(pr, n);
+  const u = { crop: U('crop'), mirror: U('mirror'), mode: U('mode'), time: U('time'), texel: U('texel') };
+  return (video, mode, t) => {
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+    const va = video.videoWidth / video.videoHeight, ca = cv.width / cv.height;
+    if (va > ca) { const s = ca / va; gl.uniform4f(u.crop, (1 - s) / 2, 0, s, 1); } else { const s = va / ca; gl.uniform4f(u.crop, 0, (1 - s) / 2, 1, s); }
+    gl.uniform1f(u.mirror, CAM.facing === 'user' ? 1 : 0); gl.uniform1i(u.mode, mode); gl.uniform1f(u.time, (t % 10000) / 1000);
+    gl.uniform2f(u.texel, 1.5 / video.videoWidth, 1.5 / video.videoHeight);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  };
+}
+TOOLS.filter = {
+  title: 'Kamera-Filter', modes: ['Wärmebild', 'Nachtsicht', 'Röntgen', 'Comic', 'Zeitwarp'], mode: 0,
+  note: 'Wärmebild und Nachtsicht sind Effekte aus der Bildhelligkeit, keine echte Wärmekamera. Zeitwarp: Eine Linie läuft über das Bild und friert ein, was sie berührt. Bewege dich mit ihr!',
+  async open() {
+    addVideo(); this.gcv = document.createElement('canvas'); stage.appendChild(this.gcv); mkCanvas();
+    stageMsg('<b>Kamera startet…</b>'); if (!await camStart('environment')) return stageMsg('<b>Keine Kamera</b>' + CAM.err); stageMsg(null);
+    this.run = glFilter(this.gcv); this.warpReset();
+  },
+  onMode() { this.warpReset(); },
+  warpReset() { this.scanY = 0; this.frozen = null; },
+  close() { camStop(); },
+  actions: [['Kamera wechseln', () => switchCam()], ['Zeitwarp neu', () => TOOLS.filter.warpReset()], ['Foto teilen', () => { const f = TOOLS.filter; shareCanvas(f.mode === 4 ? C.cv : f.gcv); }]],
+  draw(t) {
+    if (!camReady()) return;
+    const { ctx, w, h } = C, dpr = C.cv.width / w;
+    if (this.mode < 4) {
+      C.cv.style.display = 'none'; this.gcv.style.display = 'block';
+      const bw = Math.round(w * Math.min(dpr, 2)), bh = Math.round(h * Math.min(dpr, 2));
+      if (this.gcv.width !== bw || this.gcv.height !== bh) { this.gcv.width = bw; this.gcv.height = bh; }
+      if (this.run) this.run(CAM.vid, this.mode, t);
+      return;
+    }
+    C.cv.style.display = 'block'; this.gcv.style.display = 'none';
+    if (!this.live) this.live = document.createElement('canvas');
+    const lw = Math.round(w), lh = Math.round(h);
+    if (this.live.width !== lw || this.live.height !== lh) { this.live.width = lw; this.live.height = lh; this.frozen = null; }
+    const lx = this.live.getContext('2d'), m = coverMap(w, h), v = CAM.vid;
+    lx.save(); if (CAM.facing === 'user') { lx.translate(w, 0); lx.scale(-1, 1); }
+    lx.drawImage(v, m.dx, m.dy, m.vw * m.sc, m.vh * m.sc); lx.restore();
+    if (!this.frozen) { this.frozen = document.createElement('canvas'); this.frozen.width = lw; this.frozen.height = lh; this.scanY = 0; }
+    const fz = this.frozen.getContext('2d'), ny = Math.min(h, this.scanY + h / (7 * 60));
+    if (ny > this.scanY) { const y0 = Math.floor(this.scanY), dy = Math.ceil(ny - y0); fz.drawImage(this.live, 0, y0, w, dy, 0, y0, w, dy); }
+    this.scanY = ny;
+    ctx.clearRect(0, 0, w, h); ctx.drawImage(this.live, 0, 0, w, h);
+    if (this.scanY > 0) ctx.drawImage(this.frozen, 0, 0, w, this.scanY, 0, 0, w, this.scanY);
+    if (this.scanY < h) { ctx.fillStyle = '#8AD9FF'; ctx.shadowColor = '#8AD9FF'; ctx.shadowBlur = 14; ctx.fillRect(0, this.scanY - 2, w, 4); ctx.shadowBlur = 0; }
+  },
+  stats() { return []; }
+};
+
+/* ================= Sternenhimmel ================= */
+const STARS = ('Sirius,6.752,-16.716,-1.46|Canopus,6.399,-52.696,-0.74|Arktur,14.261,19.182,-0.05|Toliman,14.660,-60.834,-0.27|Wega,18.616,38.784,0.03|Capella,5.278,45.998,0.08|' +
+  'Rigel,5.242,-8.202,0.13|Prokyon,7.655,5.225,0.34|Beteigeuze,5.919,7.407,0.5|Achernar,1.629,-57.237,0.46|Hadar,14.064,-60.373,0.61|Altair,19.846,8.868,0.77|' +
+  'Acrux,12.443,-63.099,0.77|Aldebaran,4.599,16.509,0.85|Antares,16.490,-26.432,0.96|Spica,13.420,-11.161,0.97|Pollux,7.755,28.026,1.14|Fomalhaut,22.961,-29.622,1.16|' +
+  'Deneb,20.690,45.280,1.25|Mimosa,12.795,-59.689,1.25|Regulus,10.139,11.967,1.35|Adhara,6.977,-28.972,1.5|Castor,7.577,31.888,1.58|Shaula,17.560,-37.104,1.62|' +
+  'Gacrux,12.519,-57.113,1.63|Bellatrix,5.419,6.350,1.64|Elnath,5.438,28.608,1.65|Alnilam,5.604,-1.202,1.69|Alnitak,5.679,-1.943,1.77|Mintaka,5.533,-0.299,2.23|' +
+  'Saiph,5.796,-9.670,2.09|Alioth,12.900,55.960,1.77|Dubhe,11.062,61.751,1.79|Merak,11.031,56.383,2.37|Phekda,11.897,53.695,2.44|Megrez,12.257,57.033,3.31|' +
+  'Mizar,13.399,54.925,2.23|Alkaid,13.792,49.313,1.86|Mirfak,3.405,49.861,1.79|Polarstern,2.530,89.264,1.98|Kochab,14.845,74.156,2.08|Pherkad,15.345,71.834,3.0|' +
+  'Yildun,17.537,86.586,4.36|Epsilon UMi,16.766,82.037,4.2|Zeta UMi,15.734,77.795,4.3|Eta UMi,16.292,75.755,4.95|Alpheratz,0.140,29.091,2.06|Hamal,2.120,23.462,2.0|' +
+  'Schedar,0.675,56.537,2.24|Caph,0.153,59.150,2.28|Navi,0.945,60.717,2.15|Ruchbah,1.430,60.235,2.66|Segin,1.907,63.670,3.35|Sadr,20.370,40.257,2.23|' +
+  'Albireo,19.512,27.960,3.05|Aljanah,20.770,33.970,2.48|Fawaris,19.750,45.131,2.87|Sheliak,18.835,33.363,3.52|Sulafat,18.982,32.690,3.25|Zeta Lyr,18.746,37.605,4.3|' +
+  'Delta Lyr,18.908,36.899,4.3|Denebola,11.818,14.572,2.14|Algieba,10.333,19.842,2.0|Zosma,11.235,20.524,2.56|Chertan,11.237,15.430,3.33|Ras Elased,9.764,23.774,2.98|' +
+  'Adhafera,10.278,23.417,3.43|Eta Leo,10.122,16.763,3.5|Algol,3.136,40.956,2.1|Alphard,9.460,-8.659,1.98|Menkalinan,5.992,44.947,1.9|Mirach,1.162,35.621,2.07|' +
+  'Almach,2.065,42.330,2.1|Scheat,23.063,28.083,2.42|Markab,23.080,15.205,2.49|Algenib,0.220,15.184,2.83|Rasalhague,17.582,12.560,2.08|Nunki,18.921,-26.297,2.05|' +
+  'Kaus Australis,18.403,-34.385,1.85|Mirzam,6.378,-17.956,1.98|Wezen,7.140,-26.393,1.83|Alhena,6.629,16.399,1.93|Plejaden,3.79,24.12,1.6|Delta Cru,12.252,-58.749,2.8')
+  .split('|').map(s => { const [n, ra, de, mg] = s.split(','); return { n, ra: +ra * 15, dec: +de, mag: +mg }; });
+const STAR = Object.fromEntries(STARS.map(s => [s.n, s]));
+const CONST = [
+  ['Großer Wagen', 'Dubhe-Merak-Phekda-Megrez-Dubhe,Megrez-Alioth-Mizar-Alkaid'],
+  ['Kleiner Wagen', 'Polarstern-Yildun-Epsilon UMi-Zeta UMi-Kochab-Pherkad-Eta UMi-Zeta UMi'],
+  ['Orion', 'Beteigeuze-Bellatrix,Beteigeuze-Alnitak,Bellatrix-Mintaka,Mintaka-Alnilam-Alnitak,Alnitak-Saiph,Mintaka-Rigel'],
+  ['Kassiopeia', 'Caph-Schedar-Navi-Ruchbah-Segin'],
+  ['Schwan', 'Deneb-Sadr-Albireo,Aljanah-Sadr-Fawaris'],
+  ['Leier', 'Wega-Zeta Lyr-Sheliak-Sulafat-Delta Lyr-Zeta Lyr'],
+  ['Löwe', 'Regulus-Eta Leo-Algieba-Adhafera-Ras Elased,Algieba-Zosma-Denebola-Chertan-Regulus,Zosma-Chertan'],
+  ['Pegasus', 'Alpheratz-Scheat-Markab-Algenib-Alpheratz'],
+  ['Zwillinge', 'Castor-Pollux'],
+  ['Kreuz des Südens', 'Acrux-Gacrux,Mimosa-Delta Cru'],
+  ['Sommerdreieck', 'Wega-Deneb-Altair-Wega']
+].map(([n, s]) => [n, s.split(',').flatMap(ch => { const p = ch.split('-'); return p.slice(1).map((x, i) => [p[i], x]); })]);
+const FACTS = {
+  Sonne: 'Unser Stern. Sein Licht braucht gut 8 Minuten bis zu dir. Niemals direkt hineinschauen!',
+  Mond: 'Etwa 384.000 km entfernt. Er zeigt der Erde immer dieselbe Seite.',
+  Merkur: 'Der kleinste Planet und der Sonne am nächsten. Ein Jahr dauert dort nur 88 Tage.',
+  Venus: 'Der hellste Planet am Himmel und heißer als ein Pizzaofen: über 460 °C.',
+  Mars: 'Der rote Planet. Dort steht der höchste Berg im Sonnensystem, der Olympus Mons.',
+  Jupiter: 'Der Riese: Über 1.300 Erden würden hineinpassen.',
+  Saturn: 'Der Planet mit den berühmten Ringen aus Eis und Gestein.',
+  Sirius: 'Der hellste Stern am Nachthimmel, 8,6 Lichtjahre entfernt.',
+  Polarstern: 'Steht fast genau über dem Nordpol und zeigt seit Jahrhunderten Seefahrern den Weg.',
+  Beteigeuze: 'Ein Roter Riese, so groß, dass er bis über die Jupiterbahn reichen würde.',
+  Wega: 'Einer der hellsten Sommersterne und eine Ecke des Sommerdreiecks.',
+  Plejaden: 'Ein Sternhaufen: Mit bloßem Auge siehst du etwa sieben Sterne, in Wahrheit sind es über tausend.',
+  Arktur: 'Ein oranger Riesenstern, der hellste am Nordhimmel.',
+  Rigel: 'Ein blauer Superriese, etwa 120.000-mal heller als die Sonne.'
+};
+const PLAN = {
+  Merkur: [[0.38709927, 0.20563593, 7.00497902, 252.25032350, 77.45779628, 48.33076593], [0.00000037, 0.00001906, -0.00594749, 149472.67411175, 0.16047689, -0.12534081], '#c9c2b8'],
+  Venus: [[0.72333566, 0.00677672, 3.39467605, 181.97909950, 131.60246718, 76.67984255], [0.00000390, -0.00004107, -0.00078890, 58517.81538729, 0.00268329, -0.27769418], '#fff2c8'],
+  Erde: [[1.00000261, 0.01671123, -0.00001531, 100.46457166, 102.93768193, 0], [0.00000562, -0.00004392, -0.01294668, 35999.37244981, 0.32327364, 0]],
+  Mars: [[1.52371034, 0.09339410, 1.84969142, -4.55343205, -23.94362959, 49.55953891], [0.00001847, 0.00007882, -0.00813131, 19140.30268499, 0.44441088, -0.29257343], '#ff7a50'],
+  Jupiter: [[5.20288700, 0.04838624, 1.30439695, 34.39644051, 14.72847983, 100.47390909], [-0.00011607, -0.00013253, -0.00183714, 3034.74612775, 0.21252668, 0.20469106], '#f0d2a8'],
+  Saturn: [[9.53667594, 0.05386179, 2.48599187, 49.95424423, 92.59887831, 113.66242448], [-0.00125060, -0.00050991, 0.00193609, 1222.49362201, -0.41897216, -0.28867794], '#ecd28a']
+};
+const EPS = 23.43928 * D2R;
+function helio(name, T) {
+  const [e0, r] = PLAN[name], el = e0.map((v, i) => v + r[i] * T);
+  const [a, e, I, L, wp, O] = [el[0], el[1], el[2] * D2R, el[3], el[4], el[5] * D2R];
+  const M = (((L - wp) % 360) + 360) % 360 * D2R, w = (wp - el[5]) * D2R;
+  let E = M; for (let k = 0; k < 8; k++) E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  const xp = a * (Math.cos(E) - e), yp = a * Math.sqrt(1 - e * e) * Math.sin(E);
+  const cw = Math.cos(w), sw = Math.sin(w), cO = Math.cos(O), sO = Math.sin(O), cI = Math.cos(I), sI = Math.sin(I);
+  return [(cw * cO - sw * sO * cI) * xp + (-sw * cO - cw * sO * cI) * yp, (cw * sO + sw * cO * cI) * xp + (-sw * sO + cw * cO * cI) * yp, sw * sI * xp + cw * sI * yp];
+}
+const ecl2eq = (x, y, z) => { const ye = y * Math.cos(EPS) - z * Math.sin(EPS), ze = y * Math.sin(EPS) + z * Math.cos(EPS);
+  return { ra: ((Math.atan2(ye, x) * R2D) + 360) % 360, dec: Math.atan2(ze, Math.hypot(x, ye)) * R2D, dist: Math.hypot(x, y, z) }; };
+function solarSystem(d) {
+  const T = d / 36525, E = helio('Erde', T), out = [];
+  for (const n of ['Merkur', 'Venus', 'Mars', 'Jupiter', 'Saturn']) { const p = helio(n, T); out.push({ n, ...ecl2eq(p[0] - E[0], p[1] - E[1], p[2] - E[2]), col: PLAN[n][2], kind: 'Planet' }); }
+  out.push({ n: 'Sonne', ...ecl2eq(-E[0], -E[1], -E[2]), kind: 'Stern' });
+  const Lm = (218.316 + 13.176396 * d) * D2R, Mm = (134.963 + 13.064993 * d) * D2R, Fm = (93.272 + 13.229350 * d) * D2R;
+  const lam = Lm + 6.289 * D2R * Math.sin(Mm), bet = 5.128 * D2R * Math.sin(Fm);
+  const mo = ecl2eq(Math.cos(bet) * Math.cos(lam), Math.cos(bet) * Math.sin(lam), Math.sin(bet)); mo.dist = 384400 / 149597870;
+  const sunLon = Math.atan2(-E[1], -E[0]), el = (((lam - sunLon) * R2D) % 360 + 360) % 360;
+  out.push({ n: 'Mond', ...mo, dist: 0.00257, kind: 'Mond', phase: el });
+  return out;
+}
+function altAz(ra, dec, lat, lon, d) {
+  const H = (280.46061837 + 360.98564736629 * d + lon - ra) * D2R, f = lat * D2R, de = dec * D2R;
+  const alt = Math.asin(Math.sin(f) * Math.sin(de) + Math.cos(f) * Math.cos(de) * Math.cos(H));
+  const az = Math.atan2(-Math.sin(H) * Math.cos(de), Math.cos(f) * Math.sin(de) - Math.sin(f) * Math.cos(de) * Math.cos(H));
+  return [alt, az];
+}
+const enu = (alt, az) => [Math.sin(az) * Math.cos(alt), Math.cos(az) * Math.cos(alt), Math.sin(alt)];
+const MOONS = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+TOOLS.sky = {
+  title: 'Sternenhimmel', modes: ['Mit Kamera', 'Nachthimmel'], mode: 0,
+  note: 'Erst das iPhone kurz flach halten (Kompass kalibriert sich), dann an den Himmel richten. Objekte unter dem Horizont erscheinen blass, du siehst sie quasi durch die Erde.',
+  async open() { startGPS(); addVideo(); mkCanvas(); this.calc = 0; if (this.mode === 0) { stageMsg('<b>Kamera startet…</b>'); await camStart('environment'); stageMsg(null); } },
+  async onMode() { if (this.mode === 0) await camStart('environment'); else camStop(); },
+  close() { camStop(); },
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (this.mode === 1 || !camReady()) { const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#02040c'); g.addColorStop(1, '#0b1b3a'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); }
+    else { ctx.fillStyle = 'rgba(0,4,14,.35)'; ctx.fillRect(0, 0, w, h); }
+    if (!S.hasOri) { centerText(ctx, motTxt(), w / 2, h / 2, FONT(500, 16), MUT); return; }
+    const lat = S.lat != null ? S.lat : 51, lon = S.lon != null ? S.lon : 10;
+    if (t - this.calc > 1000 || !this.objs) {
+      this.calc = t; const d = Date.now() / 86400000 + 2440587.5 - 2451545.0;
+      this.objs = STARS.map(s => { const [al, az] = altAz(s.ra, s.dec, lat, lon, d); return { ...s, alt: al, az, v: enu(al, az), kind: 'Stern' }; });
+      this.ss = solarSystem(d).map(p => { const [al, az] = altAz(p.ra, p.dec, lat, lon, d); return { ...p, alt: al, az, v: enu(al, az) }; });
+    }
+    const M = devMatrix(S.a + (S.northOff || 0));
+    const toDev = v => [M[0] * v[0] + M[3] * v[1] + M[6] * v[2], M[1] * v[0] + M[4] * v[1] + M[7] * v[2], M[2] * v[0] + M[5] * v[1] + M[8] * v[2]];
+    let f; if (camReady() && this.mode === 0) { const m = coverMap(w, h); f = Math.max(m.vw, m.vh) * m.sc / 2 / Math.tan(36.85 * D2R); } else f = Math.max(w, h) / 2 / Math.tan(36.85 * D2R);
+    const proj = v => { const q = toDev(v); if (q[2] > -0.05) return null; return [w / 2 + f * q[0] / -q[2], h / 2 - f * q[1] / -q[2]]; };
+    // Horizont
+    ctx.strokeStyle = 'rgba(116,227,181,.7)'; ctx.lineWidth = 2; ctx.beginPath(); let pen = false;
+    for (let az = 0; az <= 360; az += 3) { const p = proj(enu(0, az * D2R)); if (p) { pen ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); pen = true; } else pen = false; }
+    ctx.stroke();
+    ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'].forEach((n, i) => { const p = proj(enu(0, i * 45 * D2R)); if (p) centerText(ctx, n, p[0], p[1] + 16, FONT(700, i % 2 ? 13 : 18), i === 0 ? ROSE : MINT); });
+    // Sternbilder
+    for (const [name, lines] of CONST) {
+      ctx.strokeStyle = name === 'Sommerdreieck' ? 'rgba(255,184,77,.35)' : 'rgba(138,217,255,.45)'; ctx.lineWidth = 1.4; ctx.setLineDash(name === 'Sommerdreieck' ? [6, 6] : []);
+      ctx.beginPath(); let sx = 0, sy = 0, sn = 0;
+      for (const [a, b] of lines) { const A2 = this.objs.find(o => o.n === a), B2 = this.objs.find(o => o.n === b); if (!A2 || !B2) continue;
+        const pa = proj(A2.v), pb = proj(B2.v); if (pa && pb) { ctx.moveTo(pa[0], pa[1]); ctx.lineTo(pb[0], pb[1]); sx += pa[0] + pb[0]; sy += pa[1] + pb[1]; sn += 2; } }
+      ctx.stroke(); ctx.setLineDash([]);
+      if (sn) centerText(ctx, name, sx / sn, sy / sn - 14, FONT(600, 12), name === 'Sommerdreieck' ? AMB : 'rgba(138,217,255,.85)');
+    }
+    // Sterne
+    const all = [];
+    for (const o of this.objs) { const p = proj(o.v); if (!p) continue; all.push([o, p]);
+      const r = Math.max(1.2, 4.4 - o.mag * 1.1); ctx.globalAlpha = o.alt < 0 ? 0.3 : 1;
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = 'rgba(180,210,255,.18)'; ctx.beginPath(); ctx.arc(p[0], p[1], r * 3, 0, 6.283); ctx.fill();
+      if (o.mag < 1.6 || o.n === 'Polarstern') { ctx.font = FONT(500, 12); ctx.fillStyle = 'rgba(234,242,255,.85)'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(o.n, p[0] + r + 5, p[1]); }
+      ctx.globalAlpha = 1; }
+    for (const o of this.ss) { const p = proj(o.v); if (!p) continue; all.push([o, p]); ctx.globalAlpha = o.alt < 0 ? 0.35 : 1;
+      if (o.n === 'Sonne') { ctx.font = '40px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('☀️', p[0], p[1]); }
+      else if (o.n === 'Mond') { ctx.font = '34px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(MOONS[Math.round(o.phase / 45) % 8], p[0], p[1]); }
+      else { ctx.fillStyle = o.col; ctx.shadowColor = o.col; ctx.shadowBlur = 12; ctx.beginPath(); ctx.arc(p[0], p[1], o.n === 'Jupiter' || o.n === 'Venus' ? 7 : 5.5, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0; }
+      centerText(ctx, o.n, p[0], p[1] + 26, FONT(700, 14), o.n === 'Sonne' ? AMB : TXT); ctx.globalAlpha = 1; }
+    // Fadenkreuz und Ziel
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(w / 2, h / 2, 22, 0, 6.283); ctx.stroke();
+    let best = null, bd = 60; for (const [o, p] of all) { const dd = Math.hypot(p[0] - w / 2, p[1] - h / 2) - (o.kind === 'Stern' ? 0 : 15); if (dd < bd) { bd = dd; best = o; } }
+    this.target = best;
+    if (best) {
+      const fact = FACTS[best.n] || (best.kind === 'Stern' ? `Ein Stern mit der Helligkeit ${fmt(best.mag, 1)}. Je kleiner die Zahl, desto heller.` : '');
+      const dist = best.kind === 'Planet' ? ` · ${fmt(best.dist * 149.6)} Mio. km` : '';
+      const lines = wrapText(ctx, fact, w - 56, FONT(500, 13)), bh = 52 + lines.length * 18;
+      ctx.fillStyle = 'rgba(10,24,44,.85)'; ctx.beginPath(); ctx.roundRect(12, h - bh - 12, w - 24, bh, 18); ctx.fill();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.font = FONT(700, 18); ctx.fillStyle = TXT;
+      ctx.fillText(best.n + (best.alt < 0 ? ' (unter dem Horizont)' : ''), 26, h - bh + 18);
+      ctx.font = FONT(500, 12); ctx.fillStyle = MUT; ctx.fillText(`${best.kind} · Höhe ${fmt(best.alt * R2D)}° · Richtung ${dirName((best.az * R2D + 360) % 360)}${dist}`, 26, h - bh + 36);
+      ctx.font = FONT(500, 13); ctx.fillStyle = '#c4d3e8'; lines.forEach((l, i) => ctx.fillText(l, 26, h - bh + 58 + i * 18));
+    }
+  },
+  stats() { return [['Standort', S.lat != null ? 'GPS' : 'ungefähr'], ['Kompass', S.northOff != null ? 'bereit' : 'fehlt'], ['Ziel', this.target ? this.target.n : '–']]; }
+};
+function wrapText(ctx, txt, maxW, font) {
+  ctx.font = font; const out = []; let line = '';
+  for (const wd of String(txt).split(' ')) { const tst = line ? line + ' ' + wd : wd; if (ctx.measureText(tst).width > maxW && line) { out.push(line); line = wd; } else line = tst; }
+  if (line) out.push(line); return out;
+}
+
+/* ================= Murmel-Labyrinth ================= */
+TOOLS.maze = {
+  title: 'Murmel-Labyrinth',
+  note: 'Kippe das iPhone und roll die Kugel ins leuchtende Ziel. Jedes Level wird größer. Ohne Bewegungssensor: Finger auf den Bildschirm halten, die Kugel folgt.',
+  open() { mkCanvas(); this.level = store.get('sl-maze-lv', 1); this.newLevel(); this.ptr = null;
+    const dn = e => { const r = stage.getBoundingClientRect(); this.ptr = [e.clientX - r.left, e.clientY - r.top]; }, up = () => this.ptr = null;
+    stage.addEventListener('pointerdown', dn); stage.addEventListener('pointermove', e => this.ptr && dn(e)); stage.addEventListener('pointerup', up); },
+  actions: [['Level neu', () => TOOLS.maze.newLevel()], ['Zurück auf Level 1', () => { const m = TOOLS.maze; m.level = 1; store.set('sl-maze-lv', 1); m.newLevel(); }]],
+  newLevel() {
+    const { w, h } = C, cols = Math.min(4 + this.level, 16), cell = (w - 24) / cols, rows = Math.max(4, Math.floor((h - 24) / cell));
+    const ox = (w - cols * cell) / 2, oy = (h - rows * cell) / 2;
+    const g = Array.from({ length: cols * rows }, () => ({ n: 1, e: 1, s: 1, w: 1, v: 0 })), at = (i, j) => g[j * cols + i];
+    const st = [[0, 0]]; at(0, 0).v = 1;
+    while (st.length) { const [i, j] = st[st.length - 1], nb = [];
+      if (j > 0 && !at(i, j - 1).v) nb.push([i, j - 1, 'n', 's']); if (i < cols - 1 && !at(i + 1, j).v) nb.push([i + 1, j, 'e', 'w']);
+      if (j < rows - 1 && !at(i, j + 1).v) nb.push([i, j + 1, 's', 'n']); if (i > 0 && !at(i - 1, j).v) nb.push([i - 1, j, 'w', 'e']);
+      if (!nb.length) { st.pop(); continue; }
+      const [ni, nj, a, b] = nb[Math.random() * nb.length | 0]; at(i, j)[a] = 0; at(ni, nj)[b] = 0; at(ni, nj).v = 1; st.push([ni, nj]); }
+    const wt = Math.max(3, cell * 0.14), walls = [];
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) { const c = at(i, j), x = ox + i * cell, y = oy + j * cell;
+      if (c.n) walls.push([x - wt / 2, y - wt / 2, cell + wt, wt]); if (c.w) walls.push([x - wt / 2, y - wt / 2, wt, cell + wt]);
+      if (j === rows - 1 && c.s) walls.push([x - wt / 2, y + cell - wt / 2, cell + wt, wt]); if (i === cols - 1 && c.e) walls.push([x + cell - wt / 2, y - wt / 2, wt, cell + wt]); }
+    const layer = document.createElement('canvas'), dpr = C.cv.width / w; layer.width = C.cv.width; layer.height = C.cv.height;
+    const lx = layer.getContext('2d'); lx.scale(dpr, dpr); lx.shadowColor = 'rgba(255,138,61,.8)'; lx.shadowBlur = 10;
+    const gr = lx.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#ffb067'); gr.addColorStop(1, '#e8571e'); lx.fillStyle = gr;
+    for (const r of walls) { lx.beginPath(); lx.roundRect(r[0], r[1], r[2], r[3], wt / 2); lx.fill(); }
+    Object.assign(this, { cols, rows, cell, ox, oy, walls, layer, rad: cell * 0.28, bx: ox + cell / 2, by: oy + cell / 2, vx: 0, vy: 0,
+      gx: ox + (cols - 0.5) * cell, gy: oy + (rows - 0.5) * cell, t0: performance.now(), won: 0, conf: [], last: 0 });
+    this.best = store.get('sl-maze-best-' + this.level, null);
+  },
+  draw(t) {
+    const { ctx, w, h } = C; if (!this.layer) return;
+    const dt = Math.min(0.033, this.last ? (t - this.last) / 1000 : 0.016); this.last = t;
+    if (!this.won) {
+      let ax = 0, ay = 0; const G = 1900;
+      if (S.hasOri) { ax = -S.u.x * G; ay = S.u.y * G; }
+      if (this.ptr) { ax = (this.ptr[0] - this.bx) * 12; ay = (this.ptr[1] - this.by) * 12; }
+      this.vx = (this.vx + ax * dt) * (1 - 1.1 * dt); this.vy = (this.vy + ay * dt) * (1 - 1.1 * dt);
+      const sp = Math.hypot(this.vx, this.vy), mx = this.cell * 14; if (sp > mx) { this.vx *= mx / sp; this.vy *= mx / sp; }
+      const r = this.rad;
+      for (let k = 0; k < 4; k++) { this.bx += this.vx * dt / 4; this.by += this.vy * dt / 4;
+        for (const [x, y, ww, hh] of this.walls) { const cx = clamp(this.bx, x, x + ww), cy = clamp(this.by, y, y + hh); let dx = this.bx - cx, dy = this.by - cy, d = Math.hypot(dx, dy);
+          if (d < r) { if (d < 1e-4) { dx = 0; dy = -1; d = 1; } const nx = dx / d, ny = dy / d; this.bx += nx * (r - d); this.by += ny * (r - d);
+            const vn = this.vx * nx + this.vy * ny; if (vn < 0) { this.vx -= 1.35 * vn * nx; this.vy -= 1.35 * vn * ny; } } } }
+      if (Math.hypot(this.bx - this.gx, this.by - this.gy) < this.cell * 0.3) {
+        this.won = t; const time = (t - this.t0) / 1000;
+        if (!this.best || time < this.best) { this.best = time; store.set('sl-maze-best-' + this.level, time); }
+        this.wonTime = time;
+        for (let i = 0; i < 160; i++) this.conf.push({ x: this.gx, y: this.gy, vx: (Math.random() - .5) * 600, vy: -Math.random() * 600 - 100, c: `hsl(${Math.random() * 360},95%,60%)`, r: Math.random() * 6.283 });
+      }
+    } else if (t - this.won > 2200) { this.level++; store.set('sl-maze-lv', this.level); this.newLevel(); return; }
+    ctx.clearRect(0, 0, w, h);
+    const pul = 0.5 + 0.5 * Math.sin(t * 0.006);
+    const gg = ctx.createRadialGradient(this.gx, this.gy, 0, this.gx, this.gy, this.cell * 0.45); gg.addColorStop(0, 'rgba(116,227,181,.9)'); gg.addColorStop(1, 'rgba(116,227,181,0)');
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(this.gx, this.gy, this.cell * (0.35 + pul * 0.1), 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#02060d'; ctx.beginPath(); ctx.arc(this.gx, this.gy, this.rad * 1.15, 0, 6.283); ctx.fill();
+    ctx.drawImage(this.layer, 0, 0, w, h);
+    const sx = S.hasOri ? S.u.x * 4 : 0, sy = S.hasOri ? -S.u.y * 4 : 0;
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(this.bx + 3 - sx, this.by + 4 - sy, this.rad, 0, 6.283); ctx.fill();
+    if (!this.won) { const bg = ctx.createRadialGradient(this.bx - this.rad * .35, this.by - this.rad * .4, 1, this.bx, this.by, this.rad);
+      bg.addColorStop(0, '#ffffff'); bg.addColorStop(.4, '#c9d6e6'); bg.addColorStop(1, '#4b5a6e'); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(this.bx, this.by, this.rad, 0, 6.283); ctx.fill(); }
+    if (this.conf.length) { for (const p of this.conf) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.r += 0.2;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-4, -2, 8, 4); ctx.restore(); }
+      this.conf = this.conf.filter(p => p.y < h + 20); }
+    if (this.won) { centerText(ctx, 'Geschafft! 🎉', w / 2, h / 2 - 16, FONT(800, 36), TXT); centerText(ctx, fmt(this.wonTime, 1) + ' s', w / 2, h / 2 + 24, FONT(700, 22), MINT); }
+  },
+  stats() { return [['Level', String(this.level || 1)], ['Zeit', this.won ? fmt(this.wonTime, 1) + ' s' : fmt((performance.now() - (this.t0 || performance.now())) / 1000, 1) + ' s'], ['Bestzeit', this.best ? fmt(this.best, 1) + ' s' : '–']]; }
+};
+
+/* ================= Sprunghöhe & Fall-Test ================= */
+const JUMP_REF = [[12, '📦', 'einen Schuhkarton'], [22, '⚽', 'einen Fußball'], [30, '🐈', 'eine Katze'], [45, '🪑', 'eine Stuhlsitzfläche'], [60, '🐕', 'einen Schäferhund'], [75, '🗑️', 'eine Mülltonne']];
+TOOLS.jump = {
+  title: 'Sprunghöhe',
+  note: 'iPhone fest in der Hand halten, Arm ruhig am Körper, dann hochspringen. Gemessen wird die Zeit in der Luft, daraus wird die Höhe berechnet.',
+  open() { mkCanvas(); this.id = S.ff.id; this.hist = []; this.best = store.get('sl-jump', 0); this.cur = null; this.anim = 0; },
+  actions: [['Rekord löschen', () => { const j = TOOLS.jump; j.best = 0; store.set('sl-jump', 0); }]],
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (!S.hasMot) { centerText(ctx, motTxt(), w / 2, h / 2, FONT(500, 16), MUT); return; }
+    if (S.ff.id !== this.id) { this.id = S.ff.id; const d = S.ff.last.dur;
+      if (d > 0.15 && d < 1.3) { const cm = 9.81 * d * d / 8 * 100; this.cur = { cm, d, t }; this.hist.unshift(cm); this.hist.length = Math.min(5, this.hist.length);
+        if (cm > this.best) { this.best = cm; store.set('sl-jump', cm); this.rec = t; } } }
+    const top = Math.max(60, Math.ceil((Math.max(this.best, 40) * 1.25) / 10) * 10), y0 = h - 40, y1 = 140, k = (y0 - y1) / top;
+    ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 1; ctx.font = FONT(500, 11); ctx.fillStyle = MUT; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let c = 0; c <= top; c += 10) { const y = y0 - c * k; ctx.beginPath(); ctx.moveTo(48, y); ctx.lineTo(w - 16, y); ctx.stroke(); ctx.fillText(c + ' cm', 42, y); }
+    for (const [c, e] of JUMP_REF) if (c <= top) { ctx.font = '22px system-ui'; ctx.textAlign = 'center'; ctx.fillText(e, w - 34, y0 - c * k); }
+    if (this.best) { const y = y0 - this.best * k; ctx.strokeStyle = AMB; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(48, y); ctx.lineTo(w - 60, y); ctx.stroke(); ctx.setLineDash([]); }
+    const cm = this.cur ? this.cur.cm : 0, age = this.cur ? (t - this.cur.t) / 900 : 1, hop = Math.sin(clamp(age, 0, 1) * Math.PI) * cm;
+    ctx.font = '54px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText('🧍', w / 2, y0 - hop * k + 6);
+    centerText(ctx, this.cur ? fmt(cm) + ' cm' : 'Spring!', w / 2, 70, FONT(800, 52), this.rec && t - this.rec < 2000 ? AMB : TXT);
+    if (this.cur) { const ref = [...JUMP_REF].reverse().find(r => cm > r[0]);
+      centerText(ctx, this.rec && t - this.rec < 2000 ? 'Neuer Rekord! 🏆' : ref ? `Höher als ${ref[2]} ${ref[1]}` : 'Da geht noch mehr!', w / 2, 112, FONT(600, 16), MUT); }
+  },
+  stats() { return [['Luftzeit', this.cur ? fmt(this.cur.d, 2) + ' s' : '–'], ['Rekord', this.best ? fmt(this.best) + ' cm' : '–'], ['Letzte', this.hist && this.hist.length ? this.hist.map(v => fmt(v)).join(' · ') : '–']]; }
+};
+TOOLS.fall = {
+  title: 'Fall-Test',
+  note: 'Nur auf Bett oder Sofa und höchstens aus 1 m Höhe! Lass das iPhone flach fallen. Die App misst die Fallzeit, berechnet die Höhe und den Aufprall.',
+  open() { mkCanvas(); this.id = S.ff.id; this.hist = []; this.cur = null; },
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (!S.hasMot) { centerText(ctx, motTxt(), w / 2, h / 2, FONT(500, 16), MUT); return; }
+    if (S.ff.id !== this.id) { this.id = S.ff.id; const l = S.ff.last;
+      if (l.dur > 0.1 && l.dur < 0.8) { this.cur = { cm: 9.81 * l.dur * l.dur / 2 * 100, d: l.dur, ref: l, t }; this.hist.unshift(this.cur.cm); this.hist.length = Math.min(5, this.hist.length); } }
+    if (!this.cur) { centerText(ctx, '📱', w / 2, h / 2 - 30, '64px system-ui', TXT); centerText(ctx, 'Bereit. Fallen lassen!', w / 2, h / 2 + 30, FONT(700, 20), TXT); return; }
+    const age = (t - this.cur.t) / 600;
+    centerText(ctx, fmt(this.cur.cm) + ' cm', w / 2, h * 0.32, FONT(800, 60), TXT);
+    centerText(ctx, `Fallzeit ${fmt(this.cur.d, 2)} s`, w / 2, h * 0.32 + 46, FONT(600, 16), MUT);
+    const g = this.cur.ref.peak; ctx.globalAlpha = clamp(age, 0, 1);
+    centerText(ctx, `Aufprall: ${fmt(g, 1)} g`, w / 2, h * 0.62, FONT(800, 32), g < 3 ? MINT : g < 6 ? AMB : ROSE);
+    centerText(ctx, g < 3 ? 'Weich gelandet 🛏️' : g < 6 ? 'Ordentlicher Rums' : 'Autsch! Bitte weicher 😬', w / 2, h * 0.62 + 36, FONT(600, 16), MUT);
+    ctx.globalAlpha = 1;
+  },
+  stats() { return [['Höhe', this.cur ? fmt(this.cur.cm) + ' cm' : '–'], ['Aufprall', this.cur ? fmt(this.cur.ref.peak, 1) + ' g' : '–'], ['Letzte', this.hist && this.hist.length ? this.hist.map(v => fmt(v)).join(' · ') : '–']]; }
+};
+
+/* ================= Schüttel-Wettbewerb ================= */
+const SHAKE_RANKS = [[200, 'Schüttel-Schnecke 🐌'], [600, 'Milchshake-Mixer 🥤'], [1200, 'Wirbelwind 🌪️'], [2000, 'Erdbeben-Maschine 🌋'], [1e9, 'Raketenantrieb 🚀']];
+TOOLS.shake = {
+  title: 'Schüttel-Wettbewerb',
+  note: 'Halte das iPhone sehr gut fest, am besten über dem Bett! Nach dem Countdown hast du 10 Sekunden.',
+  open() { mkCanvas(); this.state = 'idle'; this.high = store.get('sl-shake', 0); },
+  close() { MOT_HOOK = null; },
+  actions: [['Start', () => TOOLS.shake.start()]],
+  start() { this.state = 'count'; this.t0 = performance.now(); this.score = 0; this.peak = 0;
+    MOT_HOOK = (t, mag, gTot) => { if (this.state === 'run') { this.score += Math.max(0, mag - 1.5) * 0.15; this.peak = Math.max(this.peak, gTot / 9.81); } }; },
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (!S.hasMot) { centerText(ctx, motTxt(), w / 2, h / 2, FONT(500, 16), MUT); return; }
+    const el = (t - this.t0) / 1000;
+    if (this.state === 'count') { if (el >= 3) { this.state = 'run'; this.t0 = t; } else { centerText(ctx, String(3 - Math.floor(el)), w / 2, h / 2, FONT(800, 120), ORA); return; } }
+    if (this.state === 'run' && el >= 10) { this.state = 'done'; if (this.score > this.high) { this.high = this.score; store.set('sl-shake', this.score); this.newHigh = true; } else this.newHigh = false; }
+    if (this.state === 'idle') { centerText(ctx, '🤳', w / 2, h / 2 - 40, '72px system-ui', TXT); centerText(ctx, '„Start“ tippen', w / 2, h / 2 + 30, FONT(700, 20), TXT);
+      if (this.high) centerText(ctx, `Rekord: ${fmt(this.high)} Punkte`, w / 2, h / 2 + 60, FONT(600, 15), AMB); return; }
+    if (this.state === 'run') {
+      const rem = 10 - el, R = Math.min(w, h) * 0.3;
+      ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.arc(w / 2, h * 0.42, R, 0, 6.283); ctx.stroke();
+      ctx.strokeStyle = ORA; ctx.beginPath(); ctx.arc(w / 2, h * 0.42, R, -Math.PI / 2, -Math.PI / 2 + 6.283 * rem / 10); ctx.stroke(); ctx.lineCap = 'butt';
+      centerText(ctx, fmt(this.score), w / 2, h * 0.42, FONT(800, 58), TXT); centerText(ctx, 'Punkte', w / 2, h * 0.42 + 40, FONT(600, 15), MUT);
+      const pw = clamp(S.seis / 30, 0, 1), bw = w - 60; ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.roundRect(30, h - 60, bw, 22, 11); ctx.fill();
+      ctx.fillStyle = pw < .4 ? MINT : pw < .75 ? AMB : ROSE; ctx.beginPath(); ctx.roundRect(30, h - 60, Math.max(22, bw * pw), 22, 11); ctx.fill();
+      return;
+    }
+    const rank = SHAKE_RANKS.find(r => this.score < r[0])[1];
+    centerText(ctx, fmt(this.score), w / 2, h * 0.3, FONT(800, 64), TXT); centerText(ctx, 'Punkte', w / 2, h * 0.3 + 44, FONT(600, 15), MUT);
+    centerText(ctx, rank, w / 2, h * 0.55, FONT(800, 26), ORA);
+    centerText(ctx, this.newHigh ? 'Neuer Rekord! 🏆' : `Rekord: ${fmt(this.high)}`, w / 2, h * 0.55 + 40, FONT(600, 16), this.newHigh ? AMB : MUT);
+  },
+  stats() { return [['Punkte', fmt(this.score || 0)], ['Spitze', fmt(this.peak || 0, 1) + ' g'], ['Rekord', fmt(this.high || 0)]]; }
+};
+
+/* ================= Klang ================= */
+function distCurve(k) { const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; c[i] = (1 + k) * x / (1 + k * Math.abs(x)); } return c; }
+const VFX = ['Original', 'Helium 🎈', 'Monster 👹', 'Roboter 🤖', 'Alien 👽', 'Höhle 🏔️', 'Rückwärts ⏪', 'Telefon ☎️'];
+TOOLS.voice = {
+  title: 'Stimmverzerrer', modes: VFX, mode: 1,
+  note: '„Aufnehmen“ tippen und bis zu 8 Sekunden sprechen. Danach einen Effekt antippen. Der Stummschalter am iPhone muss aus sein, sonst bleibt es still.',
+  open() { mkCanvas(); this.buf = null; this.rec = false; this.play = null; this.err = null; },
+  close() { this.stopRec(true); this.stopPlay(); },
+  onMode() { this.playFx(); },
+  actions: () => [[TOOLS.voice.rec ? 'Stopp' : 'Aufnehmen', () => TOOLS.voice.toggleRec()], ['Nochmal abspielen', () => TOOLS.voice.playFx()]],
+  async toggleRec() {
+    if (this.rec) return this.stopRec();
+    const ctx = audioCtx(); this.stopPlay();
+    try { this.st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+    catch (e) { this.err = 'Mikrofon-Zugriff verweigert'; return; }
+    const src = ctx.createMediaStreamSource(this.st), sp = ctx.createScriptProcessor(4096, 1, 1), z = ctx.createGain(); z.gain.value = 0;
+    this.chunks = []; this.len = 0; this.lvl = 0;
+    sp.onaudioprocess = e => { if (!this.rec) return; const d = e.inputBuffer.getChannelData(0); this.chunks.push(new Float32Array(d)); this.len += d.length;
+      let p = 0; for (let i = 0; i < d.length; i++) p = Math.max(p, Math.abs(d[i])); this.lvl = p; if (this.len > ctx.sampleRate * 8) this.stopRec(); };
+    src.connect(sp); sp.connect(z); z.connect(ctx.destination);
+    this.nodes = [src, sp, z]; this.rec = true; this.recT = performance.now(); this.err = null; refreshActions();
+  },
+  stopRec(silent) {
+    if (!this.rec) return; this.rec = false;
+    this.nodes.forEach(n => n.disconnect()); this.st.getTracks().forEach(t => t.stop());
+    if (silent || !this.len) return;
+    const ctx = audioCtx(), b = ctx.createBuffer(1, this.len, ctx.sampleRate), d = b.getChannelData(0); let o = 0, mx = 0.001;
+    for (const c of this.chunks) { d.set(c, o); o += c.length; }
+    for (let i = 0; i < d.length; i++) mx = Math.max(mx, Math.abs(d[i]));
+    for (let i = 0; i < d.length; i++) d[i] *= 0.9 / mx;
+    this.buf = b; const bins = 300, step = Math.floor(d.length / bins) || 1; this.wave = [];
+    for (let i = 0; i < bins; i++) { let p = 0; for (let j = i * step; j < Math.min(d.length, (i + 1) * step); j++) p = Math.max(p, Math.abs(d[j])); this.wave.push(p); }
+    refreshActions(); this.playFx();
+  },
+  stopPlay() { if (this.play) { this.play.nodes.forEach(n => { try { n.stop && n.stop(); } catch (e) {} try { n.disconnect(); } catch (e) {} }); this.play = null; } },
+  playFx() {
+    if (!this.buf || this.rec) return; this.stopPlay();
+    const ctx = audioCtx(), fx = this.mode; let buf = this.buf;
+    if (fx === 6) { buf = ctx.createBuffer(1, this.buf.length, this.buf.sampleRate); const s = this.buf.getChannelData(0), d = buf.getChannelData(0); for (let i = 0; i < s.length; i++) d[i] = s[s.length - 1 - i]; }
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const out = ctx.createGain(); out.gain.value = 1.3; const comp = ctx.createDynamicsCompressor(); out.connect(comp); comp.connect(ctx.destination);
+    const nodes = [src, out, comp]; let head = src; const chain = n => { head.connect(n); head = n; nodes.push(n); };
+    if (fx === 1) src.playbackRate.value = 1.65;
+    if (fx === 2) src.playbackRate.value = 0.62;
+    if (fx === 3 || fx === 4) {
+      const rm = ctx.createGain(); rm.gain.value = 0; const osc = ctx.createOscillator(); osc.frequency.value = fx === 3 ? 55 : 420; osc.connect(rm.gain); osc.start(); nodes.push(osc); chain(rm);
+      if (fx === 4) src.playbackRate.value = 1.25;
+      if (fx === 3) { const dl = ctx.createDelay(); dl.delayTime.value = 0.012; const fb = ctx.createGain(); fb.gain.value = 0.45; head.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(out); nodes.push(dl, fb); }
+    }
+    if (fx === 5) { const dl = ctx.createDelay(1); dl.delayTime.value = 0.22; const fb = ctx.createGain(); fb.gain.value = 0.5; const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2500;
+      head.connect(dl); dl.connect(lp); lp.connect(fb); fb.connect(dl); lp.connect(out); nodes.push(dl, fb, lp); }
+    if (fx === 7) { const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1600; bp.Q.value = 1.1; chain(bp); const ws = ctx.createWaveShaper(); ws.curve = distCurve(30); chain(ws); }
+    head.connect(out); src.start();
+    this.play = { nodes, t0: ctx.currentTime, dur: buf.duration / src.playbackRate.value, rev: fx === 6 };
+  },
+  draw(t) {
+    const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (this.err) { centerText(ctx, this.err, w / 2, h / 2, FONT(600, 16), ROSE); return; }
+    if (this.rec) {
+      const s = (t - this.recT) / 1000, r = 40 + this.lvl * 90;
+      ctx.fillStyle = 'rgba(255,122,138,.18)'; ctx.beginPath(); ctx.arc(w / 2, h / 2 - 20, r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = ROSE; ctx.beginPath(); ctx.arc(w / 2, h / 2 - 20, 30, 0, 6.283); ctx.fill();
+      centerText(ctx, 'Aufnahme ' + fmt(s, 1) + ' s', w / 2, h / 2 + 60, FONT(700, 20), TXT); return;
+    }
+    if (!this.buf) { centerText(ctx, '🎙️', w / 2, h / 2 - 30, '64px system-ui', TXT); centerText(ctx, '„Aufnehmen“ tippen und loslegen', w / 2, h / 2 + 30, FONT(600, 17), TXT); return; }
+    const emo = VFX[this.mode].split(' ')[1] || '🗣️';
+    centerText(ctx, emo, w / 2, h * 0.24, '72px system-ui', TXT);
+    const n = this.wave.length, bw = (w - 32) / n, cy = h * 0.64, amp = h * 0.18;
+    let prog = -1; if (this.play) { const p = (audioCtx().currentTime - this.play.t0) / this.play.dur; if (p <= 1) prog = this.play.rev ? 1 - p : p; }
+    for (let i = 0; i < n; i++) { const v = Math.max(0.02, this.wave[i]), x = 16 + i * bw;
+      ctx.fillStyle = prog >= 0 && (this.play.rev ? i / n >= prog : i / n <= prog) ? ORA : 'rgba(138,217,255,.55)';
+      ctx.fillRect(x, cy - v * amp, Math.max(1, bw - 1), v * amp * 2); }
+  },
+  stats() { return [['Aufnahme', this.buf ? fmt(this.buf.duration, 1) + ' s' : '–'], ['Effekt', VFX[this.mode].split(' ')[0]]]; }
+};
+
+const MAGMA = [[0, [0, 0, 4]], [.25, [80, 18, 123]], [.5, [182, 54, 121]], [.75, [251, 136, 97]], [1, [252, 253, 191]]];
+function magma(v) { for (let i = 1; i < MAGMA.length; i++) if (v <= MAGMA[i][0]) { const [a, ca] = MAGMA[i - 1], [b, cb] = MAGMA[i], k = (v - a) / (b - a); return ca.map((c, j) => c + (cb[j] - c) * k | 0); } return MAGMA[4][1]; }
+async function micOpen() { mkCanvas(); stageMsg('<b>Mikrofon startet…</b>'); await startMic(); stageMsg(A.err ? '<b>Kein Mikrofon</b>' + A.err : null); }
+TOOLS.waterfall = {
+  title: 'Klang-Wasserfall',
+  note: 'Jeder Ton wird zu einer leuchtenden Spur: tiefe Töne unten, hohe oben. Pfeif eine Melodie, sing oder spiel Musik ab.',
+  async open() { await micOpen(); this.buf = null; },
+  close() { stopMic(); },
+  draw() {
+    if (!A.an || !C) return; const { ctx, w, h } = C, dpr = C.cv.width / w;
+    if (!this.buf || this.buf.width !== C.cv.width) { this.buf = document.createElement('canvas'); this.buf.width = C.cv.width; this.buf.height = C.cv.height; }
+    const bx = this.buf.getContext('2d'), W = this.buf.width, Hh = this.buf.height, sw = Math.max(2, Math.round(2 * dpr));
+    bx.drawImage(this.buf, -sw, 0);
+    const binHz = A.ctx.sampleRate / A.an.fftSize, col = bx.createImageData(sw, Hh);
+    for (let y = 0; y < Hh; y++) { const f = 60 * Math.pow(8000 / 60, 1 - y / Hh), v = A.fd[Math.round(f / binHz)] || -140, c = magma(clamp((v + 100) / 70, 0, 1));
+      for (let x = 0; x < sw; x++) { const o = (y * sw + x) * 4; col.data[o] = c[0]; col.data[o + 1] = c[1]; col.data[o + 2] = c[2]; col.data[o + 3] = 255; } }
+    bx.putImageData(col, W - sw, 0);
+    ctx.clearRect(0, 0, w, h); ctx.drawImage(this.buf, 0, 0, w, h);
+    ctx.font = FONT(600, 11); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    for (const f of [100, 300, 1000, 3000, 8000]) { const y = h * (1 - Math.log(f / 60) / Math.log(8000 / 60));
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillText(f >= 1000 ? f / 1000 + ' kHz' : f + ' Hz', 8, clamp(y, 10, h - 10)); }
+  },
+  stats() { return [['Stärkster Ton', M.freq ? fmt(M.freq) + ' Hz' : '–'], ['Note', M.freq ? M.note : '–'], ['Lautstärke', fmt(M.db) + ' dB']]; }
+};
+
+TOOLS.clap = {
+  title: 'Klatsch-Stoppuhr', modes: ['Stoppuhr', 'Reaktionstest'], mode: 0,
+  note: 'Stoppuhr: Einmal klatschen startet, nochmal klatschen stoppt. Reaktionstest: Warte, bis der Bildschirm grün wird, dann so schnell wie möglich klatschen.',
+  async open() { await micOpen(); this.env = 0.02; this.lastClap = 0; this.best = store.get('sl-react', null); this.hist = []; this.reset(); },
+  close() { stopMic(); },
+  onMode() { this.reset(); },
+  actions: [['Neu starten', () => TOOLS.clap.reset()]],
+  reset() { this.st = this.mode === 1 ? 'arm' : 'wait'; this.res = null; this.go = performance.now() + 1500 + Math.random() * 3500; },
+  isClap(t) { const pk = M.peak, c = pk > 0.28 && pk > this.env * 5 && t - this.lastClap > 180; this.env = this.env * 0.95 + pk * 0.05; if (c) this.lastClap = t; return c; },
+  draw(t) {
+    if (!C) return; const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    if (!A.an) return;
+    const clap = this.isClap(t);
+    if (this.mode === 0) {
+      if (clap) { if (this.st === 'run') { this.res = t - this.t0; this.st = 'stop'; this.hist.unshift(this.res); this.hist.length = Math.min(4, this.hist.length); } else { this.st = 'run'; this.t0 = t; } this.flash = t; }
+      const ms = this.st === 'run' ? t - this.t0 : this.res || 0;
+      if (this.flash && t - this.flash < 200) { ctx.fillStyle = `rgba(255,138,61,${0.35 * (1 - (t - this.flash) / 200)})`; ctx.fillRect(0, 0, w, h); }
+      centerText(ctx, fmt(ms / 1000, 2) + ' s', w / 2, h * 0.42, FONT(800, 64), this.st === 'stop' ? MINT : TXT);
+      centerText(ctx, this.st === 'wait' ? '👏 Klatschen zum Starten' : this.st === 'run' ? '👏 Klatschen zum Stoppen' : '👏 Klatschen für neue Runde', w / 2, h * 0.42 + 54, FONT(600, 17), MUT);
+    } else {
+      if (this.st === 'arm') { if (clap) { this.st = 'early'; this.endT = t; } else if (t >= this.go) { this.st = 'go'; this.goT = t; } }
+      else if (this.st === 'go' && clap) { this.res = t - this.goT; this.st = 'done'; this.endT = t; if (!this.best || this.res < this.best) { this.best = this.res; store.set('sl-react', this.res); this.rec = true; } else this.rec = false; }
+      else if ((this.st === 'done' || this.st === 'early') && t - this.endT > 2500) this.reset();
+      const bg = this.st === 'arm' ? '#5a1620' : this.st === 'go' ? '#1f8a5a' : '#0b1b33';
+      ctx.fillStyle = bg; ctx.beginPath(); ctx.roundRect(0, 0, w, h, 24); ctx.fill();
+      const txt = { arm: ['Warte…', 'Gleich wird es grün'], go: ['JETZT!', 'Klatschen!'], early: ['Zu früh! 😅', 'Gleich nochmal'],
+        done: [Math.round(this.res) + ' ms', this.rec ? 'Neuer Rekord! 🏆' : this.res < 250 ? 'Blitzschnell ⚡' : this.res < 400 ? 'Gut!' : 'Schneller geht’s!'] }[this.st];
+      centerText(ctx, txt[0], w / 2, h * 0.45, FONT(800, 58), TXT); centerText(ctx, txt[1], w / 2, h * 0.45 + 52, FONT(600, 18), 'rgba(255,255,255,.8)');
+    }
+  },
+  stats() { return this.mode === 0 ? [['Letzte', this.hist && this.hist.length ? this.hist.map(v => fmt(v / 1000, 2)).join(' · ') : '–']] : [['Rekord', this.best ? Math.round(this.best) + ' ms' : '–'], ['Hinweis', 'inkl. Mikrofon-Verzögerung']]; }
+};
+
+TOOLS.db = {
+  title: 'Lautstärke', note: 'Schätzwert ohne Kalibrierung: Das iPhone-Mikrofon ist kein Messgerät. Gut für Vergleiche, nicht für amtliche Werte.',
+  async open() { await micOpen(); M.dbMax = 0; M.dbSum = 0; M.dbN = 0; },
+  close() { stopMic(); },
+  actions: [['Zurücksetzen', () => { M.dbMax = 0; M.dbSum = 0; M.dbN = 0; }]],
+  draw() {
+    if (!A.an || !C) return; const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    const v = M.db || 0, col = v < 70 ? MINT : v < 85 ? AMB : ROSE, gh = h * 0.42, n = H.db.len, bw = (w - 24) / H.db.n;
+    for (let k = 0; k < n; k++) { const x = H.db.get(k), bh = x / 120 * gh; ctx.fillStyle = x < 70 ? 'rgba(116,227,181,.55)' : x < 85 ? 'rgba(255,184,77,.6)' : 'rgba(255,122,138,.7)';
+      ctx.fillRect(12 + (H.db.n - n + k) * bw, h - 14 - bh, Math.max(1, bw - 1), bh); }
+    centerText(ctx, fmt(v), w / 2, h * 0.28, FONT(800, 80), col);
+    centerText(ctx, v < 40 ? 'Flüsterleise 🤫' : v < 60 ? 'Normales Gespräch 🗣️' : v < 75 ? 'Laut 📢' : v < 90 ? 'Sehr laut 🚨' : 'Ohren zuhalten! 🙉', w / 2, h * 0.28 + 54, FONT(600, 16), MUT);
+  },
+  stats() { return [['Aktuell', fmt(M.db) + ' dB'], ['Spitze', fmt(M.dbMax) + ' dB'], ['Mittel', M.dbN ? fmt(10 * Math.log10(M.dbSum / M.dbN)) + ' dB' : '–']]; }
+};
+
+TOOLS.freq = {
+  title: 'Tonhöhe', note: 'Zeigt die stärkste Frequenz und den nächsten Ton (deutsche Notation, H statt B). Funktioniert auch als einfaches Stimmgerät.',
+  async open() { await micOpen(); },
+  close() { stopMic(); },
+  draw() {
+    if (!A.an || !C) return; const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+    const binHz = A.ctx.sampleRate / A.an.fftSize, base = h - 12, sh = h * 0.45;
+    const gr = ctx.createLinearGradient(0, base - sh, 0, base); gr.addColorStop(0, 'rgba(255,138,61,.8)'); gr.addColorStop(1, 'rgba(255,138,61,.05)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(12, base);
+    for (let x = 0; x <= w - 24; x += 2) { const f = 50 * Math.pow(160, x / (w - 24)), v = A.fd[Math.round(f / binHz)]; ctx.lineTo(12 + x, base - clamp((v + 110) / 90, 0, 1) * sh); }
+    ctx.lineTo(w - 12, base); ctx.fill();
+    centerText(ctx, M.freq ? M.note : '–', w / 2, h * 0.2, FONT(800, 64), TXT);
+    if (M.freq) { const mw = Math.min(w * 0.7, 300), mx = w / 2 - mw / 2, my = h * 0.2 + 52, ok = Math.abs(M.cents) < 5;
+      ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(mx, my, mw, 4); ctx.fillRect(w / 2 - 1, my - 8, 2, 20);
+      ctx.fillStyle = ok ? MINT : AMB; ctx.beginPath(); ctx.arc(w / 2 + M.cents / 50 * mw / 2, my + 2, 8, 0, 6.283); ctx.fill(); }
+  },
+  stats() { return [['Frequenz', M.freq ? fmt(M.freq, 1) + ' Hz' : '–'], ['Ton', M.freq ? M.note : '–'], ['Abweichung', M.freq ? (M.cents > 0 ? '+' : '') + fmt(M.cents) + ' ct' : '–']]; }
+};
+
+/* ================= Messgeräte ================= */
+function readCam() {
+  if (!camReady()) return;
+  if (!CAM.cv) { CAM.cv = document.createElement('canvas'); CAM.cv.width = 48; CAM.cv.height = 36; CAM.cx = CAM.cv.getContext('2d', { willReadFrequently: true }); }
+  CAM.cx.drawImage(CAM.vid, 0, 0, 48, 36);
+  const d = CAM.cx.getImageData(0, 0, 48, 36).data; let s = 0;
+  for (let i = 0; i < d.length; i += 4) s += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+  CAM.lum = s / (d.length / 4) / 255 * 100; CAM.lumMax = Math.max(CAM.lumMax, CAM.lum); CAM.lumMin = Math.min(CAM.lumMin, CAM.lum);
+}
+const noMot = () => { if (S.hasMot || S.hasOri) return false; const { ctx, w, h } = C; centerText(ctx, motTxt(), w / 2, h / 2, FONT(500, 16), MUT); return true; };
+Object.assign(TOOLS, {
+  level: {
+    title: 'Wasserwaage', note: 'Flach hinlegen für die Dosenlibelle, hochkant an eine Kante halten für die Röhrenlibelle. Grün heißt unter 0,5°.',
+    open() { mkCanvas(); },
+    draw() {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h); if (!S.hasOri) return noMot();
+      const u = S.u, cx = w / 2, cy = h / 2;
+      if (Math.abs(u.z) > 0.7) {
+        const R = Math.min(w, h) * 0.4, k = R / 15, ax = Math.asin(clamp(u.x, -1, 1)) * R2D, ay = Math.asin(clamp(u.y, -1, 1)) * R2D, tot = Math.acos(clamp(Math.abs(u.z), -1, 1)) * R2D, ok = tot < 0.5;
+        ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.5;
+        [1, 5, 10, 15].forEach(a => { ctx.beginPath(); ctx.arc(cx, cy, a * k, 0, 6.283); ctx.stroke(); });
+        ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
+        ctx.fillStyle = ok ? MINT : ICE; ctx.globalAlpha = .85; ctx.beginPath(); ctx.arc(cx + clamp(ax, -15, 15) * k, cy - clamp(ay, -15, 15) * k, Math.max(14, k * 2.2), 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+        centerText(ctx, fmt(tot, 1) + '°', cx, Math.min(h - 26, cy + R + 30), FONT(700, 30), ok ? MINT : TXT);
+        this.st = [['Gesamt', fmt(tot, 1) + '°'], ['Links/Rechts', fmt(ax, 1) + '°'], ['Vor/Zurück', fmt(ay, 1) + '°']];
+      } else {
+        const roll = Math.atan2(u.x, u.y) * R2D, snap = Math.round(roll / 90) * 90, dev = roll - snap, ok = Math.abs(dev) < 0.5;
+        const tw = Math.min(w * 0.86, 520), th = 56, k = tw / 2 / 10;
+        ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(cx - tw / 2, cy - th / 2, tw, th, th / 2); ctx.stroke();
+        [-1, 1].forEach(s => { ctx.beginPath(); ctx.moveTo(cx + s * 22, cy - th / 2); ctx.lineTo(cx + s * 22, cy + th / 2); ctx.stroke(); });
+        ctx.fillStyle = ok ? MINT : ICE; ctx.globalAlpha = .85; ctx.beginPath(); ctx.roundRect(cx + clamp(dev, -10, 10) * k - 34, cy - th / 2 + 7, 68, th - 14, (th - 14) / 2); ctx.fill(); ctx.globalAlpha = 1;
+        centerText(ctx, fmt(Math.abs(dev), 1) + '°', cx, cy + 74, FONT(700, 34), ok ? MINT : TXT);
+        this.st = [['Abweichung', fmt(dev, 1) + '°'], ['Kante', fmt(((snap % 360) + 360) % 360) + '°'], ['Modus', 'Röhre']];
+      }
+    },
+    stats() { return this.st || [['Gesamt', '–']]; }
+  },
+  compass: {
+    title: 'Kompass', note: 'Für genaue Werte flach halten. Bei schlechter Genauigkeit eine Acht in die Luft malen. Metall und Magnete stören.',
+    open() { mkCanvas(); },
+    draw() {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h); const cx = w / 2, cy = h / 2 - 10, R = Math.min(w, h) * 0.4;
+      if (S.heading == null) { centerText(ctx, S.hasOri ? 'Kein Kompass verfügbar' : motTxt(), cx, cy, FONT(500, 16), MUT); return; }
+      const hd = S.heading; ctx.save(); ctx.translate(cx, cy); ctx.rotate(-hd * D2R);
+      for (let a = 0; a < 360; a += 5) { const big = a % 30 === 0; ctx.strokeStyle = a === 0 ? ROSE : big ? TXT : 'rgba(255,255,255,.35)'; ctx.lineWidth = big ? 2.5 : 1.2;
+        const s = Math.sin(a * D2R), c = -Math.cos(a * D2R), r0 = R - (big ? 16 : 8); ctx.beginPath(); ctx.moveTo(s * r0, c * r0); ctx.lineTo(s * R, c * R); ctx.stroke(); }
+      ['N', 'O', 'S', 'W'].forEach((t, i) => { const a = i * 90 * D2R, rr = R - 36; ctx.save(); ctx.translate(Math.sin(a) * rr, -Math.cos(a) * rr); ctx.rotate(hd * D2R); centerText(ctx, t, 0, 0, FONT(700, 22), i === 0 ? ROSE : TXT); ctx.restore(); });
+      ctx.restore();
+      ctx.fillStyle = ORA; ctx.beginPath(); ctx.moveTo(cx, cy - R - 4); ctx.lineTo(cx - 9, cy - R - 20); ctx.lineTo(cx + 9, cy - R - 20); ctx.fill();
+      centerText(ctx, fmt(hd) + '°', cx, cy - 8, FONT(700, 46), TXT); centerText(ctx, dirName(hd), cx, cy + 30, FONT(600, 20), ICE);
+    },
+    stats() { return [['Kurs', fmt(S.heading) + '°'], ['Richtung', S.heading != null ? dirName(S.heading) : '–'], ['Genauigkeit', S.headAcc != null && S.headAcc >= 0 ? '±' + fmt(S.headAcc) + '°' : '–']]; }
+  },
+  gyro: {
+    title: 'Gyroskop', note: 'Drehrate in Grad pro Sekunde. Blau: vor/zurück kippen, Gelb: seitlich kippen, Rot: flach drehen.',
+    open() { mkCanvas(); },
+    draw() {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h); if (!S.hasMot) return noMot();
+      let m = 90; for (const r of [H.gx, H.gy, H.gz]) for (let k = 0; k < r.len; k++) m = Math.max(m, Math.abs(r.get(k))); m = Math.ceil(m / 90) * 90;
+      graph(ctx, 12, 16, w - 24, h - 32, [H.gx, H.gy, H.gz], [ICE, AMB, ROSE], -m, m);
+      ctx.font = FONT(500, 12); ctx.fillStyle = MUT; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('±' + m + ' °/s', 16, 20);
+    },
+    stats() { return [['X °/s', fmt(S.rb)], ['Y °/s', fmt(S.rg)], ['Z °/s', fmt(S.ra)]]; }
+  },
+  gforce: {
+    title: 'G-Kraft', note: 'Der Punkt zeigt die Beschleunigung ohne Erdanziehung, Ringe bei 0,5 / 1 / 1,5 g. Im Auto nur als Beifahrer benutzen.',
+    open() { mkCanvas(); },
+    actions: [['Spitze zurücksetzen', () => { S.gMax = S.gNow; }]],
+    draw() {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h); if (!S.hasMot) return noMot();
+      const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.42, k = R / 1.5;
+      ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.5; [0.5, 1, 1.5].forEach(g => { ctx.beginPath(); ctx.arc(cx, cy, g * k, 0, 6.283); ctx.stroke(); });
+      ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
+      H.gTrail.forEach(([x, y], i) => { ctx.fillStyle = `rgba(138,217,255,${i / H.gTrail.length * .5})`; ctx.beginPath(); ctx.arc(cx + clamp(x, -1.5, 1.5) * k, cy - clamp(y, -1.5, 1.5) * k, 5, 0, 6.283); ctx.fill(); });
+      const p = H.gTrail[H.gTrail.length - 1] || [0, 0]; ctx.fillStyle = ORA; ctx.beginPath(); ctx.arc(cx + clamp(p[0], -1.5, 1.5) * k, cy - clamp(p[1], -1.5, 1.5) * k, 12, 0, 6.283); ctx.fill();
+    },
+    stats() { const p = H.gTrail[H.gTrail.length - 1] || [0, 0]; return [['Gesamt', fmt(S.gNow, 2) + ' g'], ['Spitze', fmt(S.gMax, 2) + ' g'], ['Ebene', fmt(Math.hypot(p[0], p[1]), 2) + ' g']]; }
+  },
+  seismo: {
+    title: 'Erschütterung', note: 'Seismograph: iPhone auf den Tisch legen und daneben klopfen oder hüpfen.',
+    open() { mkCanvas(); },
+    actions: [['Spitze zurücksetzen', () => { S.seisMax = 0; }]],
+    draw() {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h); if (!S.hasMot) return noMot();
+      let m = 0.5; for (let k = 0; k < H.seis.len; k++) m = Math.max(m, H.seis.get(k));
+      graph(ctx, 12, 16, w - 24, h - 32, [H.seis], [S.seis < 0.3 ? MINT : S.seis < 1.5 ? AMB : ROSE], 0, m * 1.1);
+      ctx.font = FONT(500, 12); ctx.fillStyle = MUT; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(fmt(m * 1.1, 2) + ' m/s²', 16, 20);
+    },
+    stats() { return [['Aktuell', fmt(S.seis, 2)], ['Spitze', fmt(S.seisMax, 2)], ['Stufe', seisLabel(S.seis)]]; }
+  },
+  steps: {
+    title: 'Schritte', note: 'Schätzung aus dem Beschleunigungssensor, nur solange die App offen ist. Der echte iPhone-Schrittzähler ist im Browser gesperrt.',
+    open() { mkCanvas(); },
+    actions: [['Zurücksetzen', () => { S.steps = 0; S.stepTimes = []; }]],
+    draw(t) {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h); if (!S.hasMot) return noMot();
+      const age = (t - S.stepPulse) / 600;
+      if (age < 1) { ctx.strokeStyle = `rgba(116,227,181,${1 - age})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(w / 2, h / 2, 70 + age * 60, 0, 6.283); ctx.stroke(); }
+      centerText(ctx, String(S.steps), w / 2, h / 2, FONT(800, 72), TXT); centerText(ctx, 'Schritte', w / 2, h / 2 + 50, FONT(500, 16), MUT);
+    },
+    stats() { const now = performance.now(), rec = S.stepTimes.filter(x => now - x < 10000); const cad = rec.length > 1 ? (rec.length - 1) / ((rec[rec.length - 1] - rec[0]) / 60000) : 0;
+      return [['Pro Minute', fmt(cad)], ['Strecke ca.', fmt(S.steps * 0.72) + ' m']]; }
+  },
+  tacho: {
+    title: 'Tacho und GPS', modes: ['Normal', 'HUD-Spiegel'], mode: 0,
+    note: 'Geschwindigkeit direkt vom GPS. HUD-Spiegel: iPhone nachts flach aufs Armaturenbrett legen, die Anzeige spiegelt sich in der Scheibe. Nur als Beifahrer bedienen!',
+    open() { startGPS(); mkCanvas(); },
+    actions: [['Zurücksetzen', () => { S.kmhMax = 0; S.dist = 0; }]],
+    draw() {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+      if (this.mode === 1) {
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h); ctx.save(); ctx.translate(0, h); ctx.scale(1, -1);
+        centerText(ctx, S.acc != null ? fmt(S.kmh) : '–', w / 2, h * 0.45, FONT(800, Math.min(w * 0.55, 220)), '#7CFFB2');
+        centerText(ctx, 'km/h', w / 2, h * 0.45 + Math.min(w * 0.3, 120), FONT(700, 30), '#7CFFB2'); ctx.restore(); return;
+      }
+      const cx = w / 2, cy = h / 2 + 18, R = Math.min(w, h * 1.1) * 0.4, top = Math.min(300, Math.max(60, Math.ceil((S.kmhMax + 10) / 20) * 20));
+      const a0 = 135 * D2R, sw = 270 * D2R, f = clamp(S.kmh / top, 0, 1);
+      ctx.lineCap = 'round'; ctx.lineWidth = 14; ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.beginPath(); ctx.arc(cx, cy, R, a0, a0 + sw); ctx.stroke();
+      const g = ctx.createLinearGradient(cx - R, 0, cx + R, 0); g.addColorStop(0, ICE); g.addColorStop(1, ORA); ctx.strokeStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, a0, a0 + sw * f); ctx.stroke(); ctx.lineCap = 'butt';
+      const am = a0 + sw * clamp(S.kmhMax / top, 0, 1); ctx.fillStyle = AMB; ctx.beginPath(); ctx.arc(cx + Math.cos(am) * R, cy + Math.sin(am) * R, 5, 0, 6.283); ctx.fill();
+      for (let v = 0; v <= top; v += 20) { const a = a0 + sw * v / top; centerText(ctx, String(v), cx + Math.cos(a) * (R - 32), cy + Math.sin(a) * (R - 32), FONT(500, 12), MUT); }
+      centerText(ctx, S.gps && S.acc != null ? fmt(S.kmh) : '–', cx, cy - 6, FONT(800, 64), TXT);
+      centerText(ctx, S.gpsErr || (S.acc == null ? 'Suche Signal…' : 'km/h'), cx, cy + 36, FONT(500, 15), S.gpsErr ? ROSE : MUT);
+    },
+    stats() { return [['Spitze', fmt(S.kmhMax) + ' km/h'], ['Strecke', fmt(S.dist / 1000, 2) + ' km'], ['Höhe GPS', S.alt != null ? fmt(S.alt) + ' m' : '–'],
+      ['Genauigkeit', S.acc != null ? '±' + fmt(S.acc) + ' m' : '–']]; }
+  },
+  light: {
+    title: 'Licht', noCanvas: true, note: 'Misst die Bildhelligkeit der Kamera. iOS regelt die Belichtung automatisch nach, deshalb sind die Werte relativ, nicht in Lux.',
+    async open() { addVideo(); const lab = document.createElement('div'); lab.className = 'lab'; lab.innerHTML = '<b id="lumV">–</b>'; stage.appendChild(lab);
+      CAM.lumMax = 0; CAM.lumMin = 100; if (!await camStart('environment')) stageMsg('<b>Keine Kamera</b>' + CAM.err); },
+    close() { camStop(); },
+    actions: [['Kamera wechseln', () => switchCam()]],
+    draw() { const el = $('#lumV'); if (el) el.textContent = CAM.lum != null ? fmt(CAM.lum) + ' %' : 'Startet…'; },
+    stats() { return [['Helligkeit', CAM.lum != null ? fmt(CAM.lum) + ' %' : '–'], ['Max', CAM.st ? fmt(CAM.lumMax) + ' %' : '–'], ['Min', CAM.st ? fmt(CAM.lumMin) + ' %' : '–']]; }
+  },
+  touch: {
+    title: 'Touch', note: 'Mit mehreren Fingern gleichzeitig auflegen. Jeder Finger bekommt einen eigenen Kreis.',
+    open() { mkCanvas(); this.pts = new Map(); this.max = 0;
+      const up = e => { e.preventDefault(); const r = stage.getBoundingClientRect(); this.pts.clear(); for (const t of e.touches) this.pts.set(t.identifier, [t.clientX - r.left, t.clientY - r.top]); this.max = Math.max(this.max, this.pts.size); };
+      ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(ev => stage.addEventListener(ev, up, { passive: false })); },
+    draw() {
+      const { ctx, w, h } = C; ctx.clearRect(0, 0, w, h);
+      if (!this.pts.size) { centerText(ctx, 'Finger auflegen', w / 2, h / 2, FONT(500, 18), MUT); return; }
+      const cols = [ICE, ORA, MINT, ROSE, '#C7A6FF']; let i = 0;
+      for (const [, [x, y]] of this.pts) { ctx.strokeStyle = cols[i % 5]; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 46, 0, 6.283); ctx.stroke(); centerText(ctx, String(i + 1), x, y, FONT(700, 22), cols[i % 5]); i++; }
+    },
+    stats() { return [['Finger jetzt', String(this.pts ? this.pts.size : 0)], ['Maximum', String(this.max || 0)]]; }
+  },
+  display: {
+    title: 'Display', noCanvas: true, note: 'Safari begrenzt Webseiten auf 60 Bilder pro Sekunde, das ProMotion-Display kann 120. Native Apps bekommen die vollen 120.',
+    open() { stage.innerHTML = '<div class="panel" id="dispPanel"></div>'; this.t = 0; },
+    draw(t) { if (t - this.t < 400) return; this.t = t; const dpr = devicePixelRatio || 1, q = m => matchMedia(m).matches, p = $('#dispPanel'); if (!p) return;
+      p.innerHTML = [['Bildrate gemessen', fmt(S.fps) + ' fps'], ['Auflösung', screen.width + ' × ' + screen.height + ' pt'], ['Physische Pixel', Math.round(screen.width * dpr) + ' × ' + Math.round(screen.height * dpr)],
+        ['Pixelfaktor', '@' + dpr + 'x'], ['Farbraum P3', q('(color-gamut: p3)') ? 'ja' : 'nein'], ['HDR', q('(dynamic-range: high)') ? 'ja' : 'nein'], ['Dunkelmodus', q('(prefers-color-scheme: dark)') ? 'an' : 'aus']]
+        .map(([a, b]) => `<div class="row"><span>${a}</span><b>${b}</b></div>`).join(''); },
+    stats() { return []; }
+  },
+  info: {
+    title: 'Geräteinfo', noCanvas: true, note: 'Das sind alle Gerätedaten, die Safari an Webseiten weitergibt. Modellname, Akku und Speicher hält Apple bewusst zurück.',
+    open() { stage.innerHTML = '<div class="panel">' + [['CPU-Kerne', navigator.hardwareConcurrency || '–'], ['Max. Touchpunkte', navigator.maxTouchPoints || 0], ['Sprache', navigator.language],
+      ['Zeitzone', Intl.DateTimeFormat().resolvedOptions().timeZone], ['Homescreen-App', navigator.standalone ? 'ja' : 'nein'], ['KI auf Grafikchip (WebGPU)', navigator.gpu ? 'ja' : 'nein'],
+      ['Bewegungssensor', S.hasMot ? 'aktiv' : 'inaktiv'], ['User Agent', navigator.userAgent]].map(([a, b]) => `<div class="row"><span>${a}</span><b>${b}</b></div>`).join('') + '</div>'; },
+    stats() { return []; }
+  }
+});
+const seisLabel = m => m < 0.05 ? 'Ruhig' : m < 0.3 ? 'Leicht' : m < 1.5 ? 'Deutlich' : 'Stark';
+
+/* ================= Rahmen für Detailansichten ================= */
+let stage = $('#stage'), C = null, cur = null, curId = null, lastStats = 0;
+const FONT = (w, s) => `${w} ${s}px ui-rounded, -apple-system, system-ui, sans-serif`;
+const ICE = '#8AD9FF', AMB = '#FFB84D', MINT = '#74E3B5', ROSE = '#FF7A8A', MUT = '#8FA3BF', TXT = '#EAF2FF', ORA = '#FF8A3D';
+function mkCanvas() {
+  const cv = document.createElement('canvas'); stage.appendChild(cv);
+  C = { cv, ctx: cv.getContext('2d') };
+  C.fit = () => { const r = stage.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 3); cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); C.ctx.setTransform(d, 0, 0, d, 0, 0); C.w = r.width; C.h = r.height; };
+  C.fit(); return C;
+}
+addEventListener('resize', () => C && C.fit && C.fit());
+function addVideo() { const v = camVideo(); stage.appendChild(v); return v; }
+function stageMsg(html) { let el = stage.querySelector('.smsg'); if (html == null) { if (el) el.remove(); return; } if (!el) { el = document.createElement('div'); el.className = 'smsg'; stage.appendChild(el); } el.innerHTML = '<div>' + html + '</div>'; }
+function setChips(t) {
+  const el = $('#shChips'); el.innerHTML = ''; if (!t.modes) return;
+  t.modes.forEach((m, i) => { const b = document.createElement('button'); b.className = 'cb' + (i === t.mode ? ' on' : ''); b.textContent = m;
+    b.onclick = async () => { t.mode = i; [...el.children].forEach((c, k) => c.classList.toggle('on', k === i)); if (t.onMode) await t.onMode(); }; el.appendChild(b); });
+}
+function setActions(t) {
+  const el = $('#shActions'); el.innerHTML = ''; const list = typeof t.actions === 'function' ? t.actions() : (t.actions || []);
+  list.forEach(([txt, fn]) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = txt; b.onclick = fn; el.appendChild(b); });
+}
+const refreshActions = () => cur && setActions(cur);
+function setStats(arr) {
+  const el = $('#shStats');
+  if (el.children.length !== arr.length) el.innerHTML = arr.map(() => '<div class="stat glass"><b></b><span></span></div>').join('');
+  arr.forEach(([l, v], i) => { const c = el.children[i]; if (c.firstChild.innerHTML !== v) c.firstChild.innerHTML = v; if (c.lastChild.textContent !== l) c.lastChild.textContent = l; });
+}
+function centerText(ctx, txt, x, y, font, col) { ctx.font = font; ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(txt, x, y); }
+function graph(ctx, x, y, w, h, rings, cols, min, max) {
+  ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 1;
+  for (let k = 0; k <= 4; k++) { const yy = y + h * k / 4; ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + w, yy); ctx.stroke(); }
+  rings.forEach((r, j) => { if (!r.len) return; ctx.strokeStyle = cols[j]; ctx.lineWidth = 2.2; ctx.beginPath();
+    for (let k = 0; k < r.len; k++) { const px = x + w - (r.len - 1 - k) * (w / (r.n - 1)), py = y + h - (clamp(r.get(k), min, max) - min) / (max - min) * h; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+    ctx.stroke(); });
+}
+async function switchCam() { await camStart(CAM.facing === 'user' ? 'environment' : 'user'); lastVT = -1; }
+function shareCanvas(cv) {
+  if (!cv) return;
+  cv.toBlob(async b => { if (!b) return; const file = new File([b], 'sensorlab.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); } catch (e) {} }
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'sensorlab.png'; a.click(); } }, 'image/png');
+}
+function shareComposite() {
+  if (!C || !camReady()) return;
+  const out = document.createElement('canvas'); out.width = C.cv.width; out.height = C.cv.height;
+  const x = out.getContext('2d'), m = coverMap(C.w, C.h), d = C.cv.width / C.w;
+  x.save(); x.scale(d, d); if (CAM.facing === 'user') { x.translate(C.w, 0); x.scale(-1, 1); }
+  x.drawImage(CAM.vid, m.dx, m.dy, m.vw * m.sc, m.vh * m.sc); x.restore(); x.drawImage(C.cv, 0, 0); shareCanvas(out);
+}
+async function openTool(id) {
+  if (cur) closeTool();
+  const t = TOOLS[id]; if (!t) return;
+  cur = t; curId = id;
+  const n = stage.cloneNode(false); stage.replaceWith(n); stage = n; C = null; lastVT = -1;
+  $('#shTitle').textContent = t.title; $('#shNote').textContent = t.note || ''; $('#shStats').innerHTML = '';
+  setChips(t); setActions(t);
+  $('#sheet').classList.add('open'); document.body.style.overflow = 'hidden';
+  await new Promise(r => requestAnimationFrame(r));
+  try { await t.open(); } catch (e) { stageMsg('<b>Fehler</b>' + (e.message || e)); }
+  if (cur !== t && t.close) t.close();
+}
+function closeTool() {
+  if (!cur) return; const t = cur; cur = null; curId = null;
+  try { t.close && t.close(); } catch (e) {}
+  MOT_HOOK = null; C = null;
+  $('#sheet').classList.remove('open'); stage.innerHTML = ''; document.body.style.overflow = '';
+}
+function reopenTool() { const id = curId; closeTool(); openTool(id); }
+$('#shClose').onclick = closeTool;
+
+/* ================= Kacheln ================= */
+const TILES = [
+  ['face', 'gAI', '🫥', 'So sieht dich Face ID', '478 Punkte, 3D-Kopf, Laseraugen'],
+  ['hand', 'gAI', '🖐️', 'Hand-Magie', 'In die Luft malen, Funken'],
+  ['objects', 'gAI', '🔍', 'Was sieht die Kamera?', ''],
+  ['depth', 'gAI', '🧊', 'KI-Tiefenscan', 'Foto wird zur 3D-Punktwolke'],
+  ['filter', 'gAI', '🌈', 'Kamera-Filter', 'Wärmebild, Nachtsicht, Zeitwarp', true],
+  ['sky', 'gFun', '🔭', 'Sternenhimmel', 'Handy an den Himmel halten: Sterne, Planeten, Mond', true],
+  ['maze', 'gFun', '🌀', 'Murmel-Labyrinth', ''],
+  ['jump', 'gFun', '🦘', 'Sprunghöhe', ''],
+  ['fall', 'gFun', '🛏️', 'Fall-Test', 'Fallhöhe und Aufprall'],
+  ['shake', 'gFun', '🤳', 'Schüttel-Wettbewerb', ''],
+  ['voice', 'gSound', '🎙️', 'Stimmverzerrer', 'Helium, Monster, Roboter'],
+  ['waterfall', 'gSound', '🌊', 'Klang-Wasserfall', 'Töne als Farbspuren'],
+  ['clap', 'gSound', '👏', 'Klatsch-Stoppuhr', 'Plus Reaktionstest'],
+  ['db', 'gSound', '🔊', 'Lautstärke', '', 0],
+  ['freq', 'gSound', '🎵', 'Tonhöhe', 'Stimmgerät', true],
+  ['level', 'gMeas', '📐', 'Wasserwaage', '', 0], ['compass', 'gMeas', '🧭', 'Kompass', '', 0],
+  ['gyro', 'gMeas', '🔄', 'Gyroskop', '', 0], ['gforce', 'gMeas', '🏎️', 'G-Kraft', '', 0],
+  ['seismo', 'gMeas', '📈', 'Erschütterung', '', 0], ['steps', 'gMeas', '👟', 'Schritte', '', 0],
+  ['tacho', 'gMeas', '🚗', 'Tacho und GPS', '', true], ['light', 'gMeas', '💡', 'Licht', 'Über die Kamera'],
+  ['touch', 'gMeas', '👆', 'Touch', 'Multitouch testen'], ['display', 'gMeas', '📱', 'Display', ''], ['info', 'gMeas', 'ℹ️', 'Geräteinfo', 'Was Safari verrät', true]
+];
+const TE = {};
+for (const [id, g, em, name, sub, wide] of TILES) {
+  const b = document.createElement('button');
+  b.className = 'tile glass' + (wide ? ' wide' : '') + (g === 'gAI' || g === 'gFun' ? ' fun' : '');
+  b.innerHTML = `<div class="t"><span class="e">${em}</span><span class="dot"></span></div><div><div class="n">${name}</div><div class="v"></div><div class="s">${sub}</div></div>`;
+  b.onclick = () => openTool(id); $('#' + g).appendChild(b);
+  TE[id] = { v: b.querySelector('.v'), s: b.querySelector('.s'), d: b.querySelector('.dot') };
+}
+const setT = (id, v, s, st) => { const e = TE[id]; if (v != null && e.v.innerHTML !== v) e.v.innerHTML = v; if (s != null && e.s.textContent !== s) e.s.textContent = s; e.d.className = 'dot' + (st === 1 ? ' on' : st === -1 ? ' off' : ''); };
+function updateTiles() {
+  const mo = S.hasMot ? 1 : S.denied ? -1 : 0, or = S.hasOri ? 1 : S.denied ? -1 : 0, tilt = Math.acos(clamp(S.u.z, -1, 1)) * R2D, mt = motTxt();
+  setT('face', null, null, 0); setT('hand', null, null, 0); setT('depth', null, null, 0); setT('filter', null, null, 0);
+  setT('objects', null, 'Sammlung ' + store.get('sl-found', []).length + ' / 80', 0);
+  setT('sky', null, null, or); setT('maze', null, 'Level ' + store.get('sl-maze-lv', 1), or);
+  const jb = store.get('sl-jump', 0), sh = store.get('sl-shake', 0);
+  setT('jump', null, jb ? 'Rekord ' + fmt(jb) + ' cm' : 'Wie hoch springst du?', mo); setT('fall', null, null, mo);
+  setT('shake', null, sh ? 'Rekord ' + fmt(sh) + ' Punkte' : '10 Sekunden, so fest du kannst', mo);
+  ['voice', 'waterfall', 'clap', 'freq'].forEach(id => setT(id, null, null, A.err ? -1 : 0));
+  setT('db', null, 'Tippen zum Messen', A.err ? -1 : 0);
+  setT('level', S.hasOri ? fmt(tilt, 1) + '<small>°</small>' : '', S.hasOri ? (tilt < 0.5 ? 'Waagerecht' : 'Geneigt') : mt, or);
+  setT('compass', S.heading != null ? fmt(S.heading) + '<small>° ' + dirName(S.heading) + '</small>' : '', S.heading != null ? 'Magnetisch Nord' : S.hasOri ? 'Kein Kompass' : mt, S.heading != null ? 1 : or);
+  setT('gyro', S.hasMot ? fmt(Math.hypot(S.ra, S.rb, S.rg)) + '<small>°/s</small>' : '', S.hasMot ? 'Drehrate' : mt, mo);
+  setT('gforce', S.hasMot ? fmt(S.gNow, 2) + '<small>g</small>' : '', S.hasMot ? 'Spitze ' + fmt(S.gMax, 2) + ' g' : mt, mo);
+  setT('seismo', S.hasMot ? fmt(S.seis, 2) + '<small>m/s²</small>' : '', S.hasMot ? seisLabel(S.seis) : mt, mo);
+  setT('steps', S.hasMot ? String(S.steps) : '', S.hasMot ? 'Schätzung seit Start' : mt, mo);
+  setT('tacho', S.gps && S.acc != null ? fmt(S.kmh) + '<small>km/h</small>' : '', S.gpsErr || (S.gps ? (S.acc != null ? 'Strecke ' + fmt(S.dist / 1000, 2) + ' km' : 'Suche Signal…') : 'Tippen zum Starten, mit HUD-Spiegel'), S.gpsErr ? -1 : S.gps && S.acc != null ? 1 : 0);
+  setT('light', null, null, CAM.err ? -1 : 0); setT('touch', null, null, 1);
+  setT('display', fmt(S.fps) + '<small>fps</small>', screen.width + ' × ' + screen.height + ' pt', 1); setT('info', null, null, 1);
+  const live = [S.hasOri, S.hasMot, S.heading != null, S.gps && S.acc != null].filter(Boolean).length;
+  $('#liveTxt').textContent = live ? live + ' Sensoren live' : (S.denied ? 'kein Zugriff' : 'bereit');
+  $('#liveDot').className = 'dot' + (live ? ' on' : S.denied ? ' off' : '');
+  $('#hTilt').textContent = S.hasOri ? fmt(tilt, 1) + '°' : '–';
+}
+
+/* ================= Hauptschleife ================= */
+let lastTile = 0, fN = 0, fT = 0;
+function loop(t) {
+  requestAnimationFrame(loop);
+  fN++; if (t - fT >= 1000) { S.fps = fN * 1000 / (t - fT); fN = 0; fT = t; }
+  if (A.an) readMic();
+  if (cur === TOOLS.light) readCam();
+  if (!cur && HERO.ok) HERO.render(t);
+  if (cur && cur.draw && (C || cur.noCanvas)) { try { cur.draw(t); } catch (e) { if (!loop.err) { loop.err = 1; console.error(e); } } }
+  if (cur && t - lastStats > 120) { try { setStats(cur.stats ? cur.stats() : []); } catch (e) {} lastStats = t; }
+  if (!cur && t - lastTile > 250) { updateTiles(); lastTile = t; $('#bg').style.transform = `translate3d(${clamp(S.u.x, -1, 1) * 18}px,${clamp(-S.u.y, -1, 1) * 18}px,0)`; }
+}
+
+/* ================= Start ================= */
+(function icon() {
+  const c = document.createElement('canvas'); c.width = c.height = 180; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 180, 180); g.addColorStop(0, '#ff9a4d'); g.addColorStop(.5, '#d24d1e'); g.addColorStop(1, '#14204a');
+  x.fillStyle = g; x.fillRect(0, 0, 180, 180);
+  x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 7; x.beginPath(); x.arc(90, 90, 52, 0, 6.283); x.stroke();
+  x.lineWidth = 3; x.globalAlpha = .55; x.beginPath(); x.arc(90, 90, 24, 0, 6.283); x.stroke(); x.globalAlpha = 1;
+  x.fillStyle = '#8AD9FF'; x.beginPath(); x.arc(104, 78, 15, 0, 6.283); x.fill();
+  $('#touchIcon').href = c.toDataURL('image/png');
+})();
+$('#gateBtn').onclick = async () => { await enableMotion(); $('#gate').classList.add('hide'); };
+$('#hCenter').onclick = () => { S.alpha0 = S.a; HERO.yaw = 0; };
+$('#hXray').onclick = () => HERO.setXray && HERO.setXray(!HERO.xray);
+initHero();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
